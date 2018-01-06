@@ -1,0 +1,18 @@
+<root>
+  <php_list>
+    <php version="7.2.1" vc="15">http://windows.php.net/downloads/releases/php-7.2.1-nts-Win32-VC15-x64.zip</php>
+    <php version="7.1.13" vc="14">http://windows.php.net/downloads/releases/php-7.1.13-nts-Win32-VC14-x64.zip</php>
+    <php version="7.0.27" vc="14">http://windows.php.net/downloads/releases/php-7.0.27-Win32-VC14-x64.zip</php>
+    <php version="5.6.33" vc="11">http://windows.php.net/downloads/releases/php-5.6.33-nts-Win32-VC11-x64.zip</php>
+    <php version="5.5.38" vc="11">http://windows.php.net/downloads/releases/archives/php-5.5.38-Win32-VC11-x64.zip</php>
+  </php_list>
+  <nginx_list>
+    <nginx version="1.13.8">http://nginx.org/download/nginx-1.13.8.zip</nginx>
+    <nginx version="1.12.2">http://nginx.org/download/nginx-1.12.2.zip</nginx>
+  </nginx_list>
+  <vc_list>
+    <vc version="15">https://go.microsoft.com/fwlink/?LinkId=746572</vc>
+    <vc version="14">https://www.microsoft.com/zh-CN/download/details.aspx?id=48145</vc>
+    <vc version="11">https://www.microsoft.com/zh-CN/download/details.aspx?id=30679</vc>
+  </vc_list>
+</root>

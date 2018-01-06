@@ -1,12 +1,15 @@
-﻿<Window x:Class="php_env.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:php_env"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
+﻿<Controls:MetroWindow x:Class="php_env.MainWindow"
+                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                      xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+                      Title="MainWindow"
+                      Height="600"
+                      Width="800"
+                      BorderBrush="{DynamicResource AccentColorBrush}"
+                      BorderThickness="1"
+                      WindowStartupLocation="CenterScreen"
+                      Icon="favicon.ico">
     <Grid>
-        
+        <Label>hello world</Label>
     </Grid>
-</Window>
+</Controls:MetroWindow>
