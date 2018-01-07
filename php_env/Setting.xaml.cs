@@ -45,5 +45,21 @@ namespace php_env
                 s.installed = true;
             }
         }
+
+        private void viewPhpPath(object sender, RoutedEventArgs e)
+        {
+            MainWindow mainWin = this.Owner as MainWindow;
+            PhpItem s = ((Button)sender).DataContext as PhpItem;
+            string dPath = mainWin.basePath + @"app\php"+s.version;
+            System.Diagnostics.Process.Start(@"explorer.exe ", dPath);
+        }
+
+        private void viewNginxPath(object sender, RoutedEventArgs e)
+        {
+            MainWindow mainWin = this.Owner as MainWindow;
+            NginxItem s = ((Button)sender).DataContext as NginxItem;
+            string dPath = mainWin.basePath + @"app\nginx" + s.version;
+            System.Diagnostics.Process.Start(@"explorer.exe ", dPath);
+        }
     }
 }

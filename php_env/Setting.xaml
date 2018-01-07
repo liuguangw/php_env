@@ -27,7 +27,10 @@
                         <DataGridTemplateColumn  Header="操作">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding installed, Converter={StaticResource btnConverter}}" Click="phpAction" Width="50"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="{Binding installed, Converter={StaticResource btnConverter}}" Click="phpAction" Padding="12,8"/>
+                                        <Button Margin="10,0,0,0" IsEnabled="{Binding installed}" Click="viewPhpPath">浏览目录</Button>
+                                    </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
@@ -45,7 +48,10 @@
                         <DataGridTemplateColumn  Header="操作">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding installed, Converter={StaticResource btnConverter}}" Click="nginxAction" Width="50"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="{Binding installed, Converter={StaticResource btnConverter}}" Click="nginxAction" Padding="12,8"/>
+                                        <Button Margin="10,0,0,0" IsEnabled="{Binding installed}" Click="viewNginxPath">浏览目录</Button>
+                                    </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

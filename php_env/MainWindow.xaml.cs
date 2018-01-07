@@ -13,7 +13,7 @@ namespace php_env
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
-        private string basePath;
+        public string basePath;
         public ObservableCollection<PhpItem> phpList;
         public ObservableCollection<NginxItem> nginxList;
         public ObservableCollection<VcItem> vcList;
