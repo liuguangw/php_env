@@ -19,12 +19,12 @@
         <TabItem Header="php版本管理">
             <StackPanel>
                 <DataGrid Name="phpList" ItemsSource="{Binding}" Margin="10,20,10,0" AutoGenerateColumns="False"
-                  Style="{StaticResource AzureDataGrid}">
+                   ColumnWidth="*" Style="{StaticResource AzureDataGrid}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="php版本"  Binding="{Binding version}" Width="120"/>
-                        <DataGridTextColumn Header="vc版本" Binding="{Binding vcVersion}"  Width="80"/>
-                        <DataGridTextColumn Header="状态" Binding="{Binding installed, Converter={StaticResource statusConverter}}" Width="70"/>
-                        <DataGridTemplateColumn  Header="操作" Width="180">
+                        <DataGridTextColumn Header="php版本"  Binding="{Binding version}"/>
+                        <DataGridTextColumn Header="vc版本" Binding="{Binding vcVersion}" />
+                        <DataGridTextColumn Header="状态" Binding="{Binding installed, Converter={StaticResource statusConverter}}"/>
+                        <DataGridTemplateColumn  Header="操作">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button Content="{Binding installed, Converter={StaticResource btnConverter}}" Click="phpAction" Width="50"/>
@@ -37,7 +37,20 @@
         </TabItem>
         <TabItem Header="nginx版本管理">
             <StackPanel>
-                <TextBlock>Enter some text</TextBlock>
+                <DataGrid Name="nginxList" ItemsSource="{Binding}" Margin="10,20,10,0" AutoGenerateColumns="False"
+                   ColumnWidth="*" Style="{StaticResource AzureDataGrid}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="nginx版本"  Binding="{Binding version}"/>
+                        <DataGridTextColumn Header="状态" Binding="{Binding installed, Converter={StaticResource statusConverter}}"/>
+                        <DataGridTemplateColumn  Header="操作">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding installed, Converter={StaticResource btnConverter}}" Click="nginxAction" Width="50"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
             </StackPanel>
         </TabItem>
         <TabItem Header="VC环境安装">
