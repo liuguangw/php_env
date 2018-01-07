@@ -1,0 +1,54 @@
+﻿<Controls:MetroWindow x:Class="php_env.Setting"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+        xmlns:local="clr-namespace:php_env"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Title="设置" 
+        Height="375"
+        Width="500"
+        GlowBrush="{DynamicResource AccentColorBrush}"
+        Icon="icons/setting.png">
+    <TabControl>
+        <TabControl.Resources>
+            <local:InstallResultConverter x:Key="statusConverter"></local:InstallResultConverter>
+            <local:InstallButtonConverter x:Key="btnConverter"></local:InstallButtonConverter>
+        </TabControl.Resources>
+        <TabItem Header="php版本管理">
+            <StackPanel>
+                <DataGrid Name="phpList" ItemsSource="{Binding}" Margin="10,20,10,0" AutoGenerateColumns="False"
+                  Style="{StaticResource AzureDataGrid}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="php版本"  Binding="{Binding version}" Width="120"/>
+                        <DataGridTextColumn Header="vc版本" Binding="{Binding vcVersion}"  Width="80"/>
+                        <DataGridTextColumn Header="状态" Binding="{Binding installed, Converter={StaticResource statusConverter}}" Width="70"/>
+                        <DataGridTemplateColumn  Header="操作" Width="180">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding installed, Converter={StaticResource btnConverter}}" Click="phpAction" Width="50"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </TabItem>
+        <TabItem Header="nginx版本管理">
+            <StackPanel>
+                <TextBlock>Enter some text</TextBlock>
+            </StackPanel>
+        </TabItem>
+        <TabItem Header="VC环境安装">
+            <StackPanel>
+                <TextBlock>Enter some text</TextBlock>
+            </StackPanel>
+        </TabItem>
+        <TabItem Header="关于">
+            <StackPanel>
+                <TextBlock>Enter some text</TextBlock>
+            </StackPanel>
+        </TabItem>
+    </TabControl>
+</Controls:MetroWindow>
