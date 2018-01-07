@@ -5,6 +5,10 @@ using System.Windows.Data;
 
 namespace php_env
 {
+    public enum AppType
+    {
+        php, nginx
+    }
     public class PhpItem : INotifyPropertyChanged
     {
         public string version { get; }
@@ -13,11 +17,14 @@ namespace php_env
         private bool _installed;
         public bool installed
         {
-            get {
+            get
+            {
                 return this._installed;
             }
-            set {
-                if (this._installed != value) {
+            set
+            {
+                if (this._installed != value)
+                {
                     this._installed = value;
                     this.Changed("installed");
                 }

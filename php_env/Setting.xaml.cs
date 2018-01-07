@@ -17,7 +17,7 @@ namespace php_env
             nginxList.DataContext = mainWin.nginxList;
         }
 
-        private void phpAction(object sender, System.Windows.RoutedEventArgs e)
+        private void phpAction(object sender, RoutedEventArgs e)
         {
             PhpItem s = ((Button)sender).DataContext as PhpItem;
             if (s.installed)
@@ -25,13 +25,14 @@ namespace php_env
                 MessageBox.Show("执行卸载");
                 s.installed = false;
             }
-            else {
+            else
+            {
                 MessageBox.Show(s.downloadUrl);
                 s.installed = true;
             }
         }
 
-        private void nginxAction(object sender, System.Windows.RoutedEventArgs e)
+        private void nginxAction(object sender, RoutedEventArgs e)
         {
             NginxItem s = ((Button)sender).DataContext as NginxItem;
             if (s.installed)
@@ -50,16 +51,14 @@ namespace php_env
         {
             MainWindow mainWin = this.Owner as MainWindow;
             PhpItem s = ((Button)sender).DataContext as PhpItem;
-            string dPath = mainWin.basePath + @"app\php"+s.version;
-            System.Diagnostics.Process.Start(@"explorer.exe ", dPath);
+            System.Diagnostics.Process.Start(@"explorer.exe ", mainWin.getAppPath(AppType.php, s.version));
         }
 
         private void viewNginxPath(object sender, RoutedEventArgs e)
         {
             MainWindow mainWin = this.Owner as MainWindow;
             NginxItem s = ((Button)sender).DataContext as NginxItem;
-            string dPath = mainWin.basePath + @"app\nginx" + s.version;
-            System.Diagnostics.Process.Start(@"explorer.exe ", dPath);
+            System.Diagnostics.Process.Start(@"explorer.exe ", mainWin.getAppPath(AppType.nginx, s.version));
         }
     }
 }

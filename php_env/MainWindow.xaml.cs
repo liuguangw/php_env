@@ -1,6 +1,7 @@
 ﻿//定义是否为代码调试模式
 #define APP_DEBUG 
 using MahApps.Metro.Controls;
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
@@ -21,6 +22,17 @@ namespace php_env
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        /// <summary>
+        /// 获取应用所在目录
+        /// </summary>
+        /// <param name="appType">应用类型</param>
+        /// <param name="appVersion">应用版本</param>
+        /// <returns></returns>
+        public string getAppPath(AppType appType, string appVersion)
+        {
+            return this.basePath + @"app\" + Enum.GetName(typeof(AppType), appType) + @"\" + appVersion;
         }
 
         /// <summary>
@@ -73,11 +85,10 @@ namespace php_env
                 //
                 int i;
                 this.phpList = new ObservableCollection<PhpItem>();
-                string appPath = this.basePath + "app";
                 for (i = 0; i < phpListXml.Count; i++)
                 {
                     XmlElement tmp = phpListXml.Item(i) as XmlElement;
-                    DirectoryInfo d = new DirectoryInfo(appPath + @"\php" + tmp.GetAttribute("version"));
+                    DirectoryInfo d = new DirectoryInfo(this.getAppPath(AppType.php, tmp.GetAttribute("version")));
                     PhpItem tmp1 = new PhpItem(tmp.GetAttribute("version"), tmp.GetAttribute("vc"), tmp.InnerText, d.Exists);
                     this.phpList.Add(tmp1);
                 }
@@ -85,7 +96,7 @@ namespace php_env
                 for (i = 0; i < nginxListXml.Count; i++)
                 {
                     XmlElement tmp = nginxListXml.Item(i) as XmlElement;
-                    DirectoryInfo d = new DirectoryInfo(appPath + @"\php" + tmp.GetAttribute("version"));
+                    DirectoryInfo d = new DirectoryInfo(this.getAppPath(AppType.nginx, tmp.GetAttribute("version")));
                     NginxItem tmp1 = new NginxItem(tmp.GetAttribute("version"), tmp.InnerText, d.Exists);
                     this.nginxList.Add(tmp1);
                 }
