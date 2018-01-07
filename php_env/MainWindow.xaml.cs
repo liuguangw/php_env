@@ -35,6 +35,20 @@ namespace php_env
             return this.basePath + @"app\" + Enum.GetName(typeof(AppType), appType) + @"\" + appVersion;
         }
 
+        public string getZipPath(AppType appType, string appVersion,bool isTmpPath=true)
+        {
+            string path=this.basePath + @"download\" + Enum.GetName(typeof(AppType), appType) + @"\" + appVersion;
+            if (isTmpPath)
+            {
+                path += @".zip.tmp";
+            }
+            else
+            {
+                path += @".zip";
+            }
+            return path;
+        }
+
         /// <summary>
         /// 显示设置窗口
         /// </summary>
@@ -64,7 +78,7 @@ namespace php_env
             }
         }
 
-        private void showErrorMessage(string err)
+        public void showErrorMessage(string err)
         {
             MessageBox.Show(err, "出错了", MessageBoxButton.OK, MessageBoxImage.Error);
         }
