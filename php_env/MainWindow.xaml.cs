@@ -21,7 +21,24 @@ namespace php_env
 
         public MainWindow()
         {
+            this.phpList = new ObservableCollection<AppItem>();
+            this.nginxList = new ObservableCollection<AppItem>();
+            this.vcList = new ObservableCollection<AppItem>();
+            this.Resources["phpList"] = new ObservableCollection<AppItem>();
+            this.Resources["nginxList"] = new ObservableCollection<AppItem>();
             InitializeComponent();
+        }
+
+        private void filterItems(ObservableCollection<AppItem> srcList, ObservableCollection<AppItem> resourceList)
+        {
+            resourceList.Clear();
+            foreach (AppItem item in srcList)
+            {
+                if (item.installed)
+                {
+                    resourceList.Add(item);
+                }
+            }
         }
 
         public string getAppPath(AppType appType, string appVersion)
@@ -74,7 +91,7 @@ namespace php_env
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void showSetting(object sender, System.Windows.RoutedEventArgs e)
+        private void showSetting(object sender, RoutedEventArgs e)
         {
             Setting settingDialog = new Setting(this);
             settingDialog.Owner = this;
@@ -115,7 +132,6 @@ namespace php_env
                 XmlNodeList vcListXml = doc.DocumentElement["vc"].GetElementsByTagName("item");
                 //
                 int i;
-                this.phpList = new ObservableCollection<AppItem>();
                 for (i = 0; i < phpListXml.Count; i++)
                 {
                     XmlElement tmp = phpListXml.Item(i) as XmlElement;
@@ -123,7 +139,6 @@ namespace php_env
                     AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.GetAttribute("vc"), tmp.InnerText, AppType.php, d.Exists);
                     this.phpList.Add(tmp1);
                 }
-                this.nginxList = new ObservableCollection<AppItem>();
                 for (i = 0; i < nginxListXml.Count; i++)
                 {
                     XmlElement tmp = nginxListXml.Item(i) as XmlElement;
@@ -131,13 +146,14 @@ namespace php_env
                     AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.InnerText, AppType.nginx, d.Exists);
                     this.nginxList.Add(tmp1);
                 }
-                this.vcList = new ObservableCollection<AppItem>();
                 for (i = 0; i < vcListXml.Count; i++)
                 {
                     XmlElement tmp = vcListXml.Item(i) as XmlElement;
                     AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.InnerText, AppType.vc);
                     this.vcList.Add(tmp1);
                 }
+                this.refreshItemSource("phpList", AppType.php);
+                this.refreshItemSource("nginxList", AppType.nginx);
             }
             catch (FileNotFoundException e1)
             {
@@ -147,13 +163,31 @@ namespace php_env
 
         private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            this.basePath = System.AppDomain.CurrentDomain.BaseDirectory;
+            this.basePath = AppDomain.CurrentDomain.BaseDirectory;
 #if (APP_DEBUG)
 
             DirectoryInfo di = new DirectoryInfo(basePath);
             basePath = di.Parent.Parent.FullName + @"\";
 #endif
             this.loadXmlData();
+        }
+
+        private void refreshItemSource(string resourceName, AppType appType)
+        {
+            ObservableCollection<AppItem> list = this.Resources[resourceName] as ObservableCollection<AppItem>;
+            if (appType == AppType.php)
+            {
+                this.filterItems(this.phpList, list);
+            }
+            else if (appType == AppType.nginx)
+            {
+                this.filterItems(this.nginxList, list);
+            }
+        }
+
+        private void phpSelector_DropDownOpened(object sender, EventArgs e)
+        {
+            this.refreshItemSource("phpList",AppType.php);
         }
     }
 }

@@ -14,14 +14,17 @@ namespace php_env
     /// </summary>
     public partial class Setting : MetroWindow
     {
+        public int taskCount = 0;
+
         public Setting(MainWindow mainWin)
         {
             this.Owner = mainWin;
             this.Resources.Add("statusConverter", new InstallResultConverter());
             this.Resources.Add("btnConverter", new InstallButtonConverter());
             InitializeComponent();
-            phpList.DataContext = mainWin.phpList;
-            nginxList.DataContext = mainWin.nginxList;
+            this.phpList.DataContext = mainWin.phpList;
+            this.nginxList.DataContext = mainWin.nginxList;
+            this.vcList.DataContext = mainWin.vcList;
         }
 
         private void showCommonStatus(Label textLabel, MetroProgressBar progressBar)
@@ -54,7 +57,7 @@ namespace php_env
         /// 任务失败时执行
         /// </summary>
         /// <param name="message">错误消息</param>
-        private void onItemTaskFailed(AppItem appItem,string message,string title="出错了")
+        private void onItemTaskFailed(AppItem appItem, string message, string title = "出错了")
         {
             MainWindow mainWin = this.Owner as MainWindow;
             //
@@ -78,6 +81,8 @@ namespace php_env
             {
             }
             dataGrid.IsEnabled = true;
+            this.taskCount--;
+            this.showCommonStatus(statusText, progressBar);
             mainWin.showErrorMessage(message);
         }
 
@@ -93,6 +98,7 @@ namespace php_env
         /// <param name="e"></param>
         private async void mainAction(object sender, RoutedEventArgs e)
         {
+            this.taskCount++;
             AppItem appItem = ((Button)sender).DataContext as AppItem;
             MainWindow mainWin = this.Owner as MainWindow;
             string appPath = mainWin.getAppPath(appItem);
@@ -158,7 +164,7 @@ namespace php_env
                     if (!result.success)
                     {
                         //下载文件出错
-                        this.onItemTaskFailed(appItem, result,"下载文件出错");
+                        this.onItemTaskFailed(appItem, result, "下载文件出错");
                         return;
                     }
                     try
@@ -207,7 +213,7 @@ namespace php_env
                     {
                         try
                         {
-                            phpIniFile.CopyTo(appPath + @"\php.ini", true);
+                            phpIniFile.CopyTo(appPath + @"\php.ini", false);
                         }
                         catch (Exception e1)
                         {
@@ -235,7 +241,7 @@ namespace php_env
                         return;
                     }
                     //复制配置文件
-                    result = await this.copyFiles(new DirectoryInfo(mainWin.getDefaultConfigPath(appItem)),new DirectoryInfo(appPath+@"\conf"));
+                    result = await this.copyFiles(new DirectoryInfo(mainWin.getDefaultConfigPath(appItem)), new DirectoryInfo(appPath + @"\conf"));
                     if (!result.success)
                     {
                         this.onItemTaskFailed(appItem, result, "复制配置文件出错");
@@ -247,6 +253,7 @@ namespace php_env
                 appItem.installed = true;
             }
             dataGrid.IsEnabled = true;
+            this.taskCount--;
         }
 
         /// <summary>
@@ -296,7 +303,7 @@ namespace php_env
                     int i;
                     for (i = 0; i < files.Length; i++)
                     {
-                        files[i].CopyTo(distPath.FullName + @"\" + files[i].Name,true);
+                        files[i].CopyTo(distPath.FullName + @"\" + files[i].Name, true);
                     }
                     //复制目录
                     DirectoryInfo[] dirs = srcPath.GetDirectories();
@@ -399,6 +406,25 @@ namespace php_env
             AppItem appItem = ((Button)sender).DataContext as AppItem;
             MainWindow mainWin = this.Owner as MainWindow;
             System.Diagnostics.Process.Start(@"explorer.exe ", mainWin.getAppPath(appItem));
+        }
+
+        private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (this.taskCount > 0)
+            {
+                e.Cancel = true;
+                MessageBox.Show("还有" + this.taskCount + "个任务正在进行中", "任务进行中", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        /// <summary>
+        /// 超链接处理
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void vcHyperlinkColumn_Click(object sender, RoutedEventArgs e)
+        {
+            AppItem appItem = ((TextBlock)sender).DataContext as AppItem;
+            System.Diagnostics.Process.Start(appItem.downloadUrl);
         }
     }
 }

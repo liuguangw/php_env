@@ -4,7 +4,8 @@
         xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
         xmlns:local="clr-namespace:php_env"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
+        Closing="MetroWindow_Closing"
+        ResizeMode="CanMinimize"
         ShowInTaskbar="False"
         Title="设置" 
         Height="385"
@@ -98,7 +99,19 @@
         </TabItem>
         <TabItem Header="VC环境安装">
             <StackPanel>
-                <TextBlock>Enter some text</TextBlock>
+                <DataGrid Name="vcList" ItemsSource="{Binding}" Margin="10,10,10,0" AutoGenerateColumns="False"
+                   ColumnWidth="*" Style="{StaticResource AzureDataGrid}" Height="262">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="vc库版本"  Binding="{Binding version}" Width="*"/>
+                        <DataGridHyperlinkColumn Header="下载地址" Binding="{Binding downloadUrl}" Width="4*">
+                            <DataGridHyperlinkColumn.ElementStyle>
+                                <Style>
+                                    <EventSetter Event="Hyperlink.Click" Handler="vcHyperlinkColumn_Click"/>
+                                </Style>
+                            </DataGridHyperlinkColumn.ElementStyle>
+                        </DataGridHyperlinkColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
             </StackPanel>
         </TabItem>
         <TabItem Header="关于">
