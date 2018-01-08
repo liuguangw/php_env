@@ -21,24 +21,10 @@ namespace php_env
 
         public MainWindow()
         {
-            this.phpList = new ObservableCollection<AppItem>();
-            this.nginxList = new ObservableCollection<AppItem>();
+            this.Resources["phpList"] = this.phpList = new ObservableCollection<AppItem>();
+            this.Resources["nginxList"] = this.nginxList = new ObservableCollection<AppItem>();
             this.vcList = new ObservableCollection<AppItem>();
-            this.Resources["phpList"] = new ObservableCollection<AppItem>();
-            this.Resources["nginxList"] = new ObservableCollection<AppItem>();
             InitializeComponent();
-        }
-
-        private void filterItems(ObservableCollection<AppItem> srcList, ObservableCollection<AppItem> resourceList)
-        {
-            resourceList.Clear();
-            foreach (AppItem item in srcList)
-            {
-                if (item.installed)
-                {
-                    resourceList.Add(item);
-                }
-            }
         }
 
         public string getAppPath(AppType appType, string appVersion)
@@ -152,8 +138,6 @@ namespace php_env
                     AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.InnerText, AppType.vc);
                     this.vcList.Add(tmp1);
                 }
-                this.refreshItemSource("phpList", AppType.php);
-                this.refreshItemSource("nginxList", AppType.nginx);
             }
             catch (FileNotFoundException e1)
             {
@@ -172,22 +156,17 @@ namespace php_env
             this.loadXmlData();
         }
 
-        private void refreshItemSource(string resourceName, AppType appType)
+        private void phpSelector_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            ObservableCollection<AppItem> list = this.Resources[resourceName] as ObservableCollection<AppItem>;
-            if (appType == AppType.php)
+            AppItem orgItem = null;
+            string src = "";
+            if (e.RemovedItems.Count > 0)
             {
-                this.filterItems(this.phpList, list);
+                orgItem=e.RemovedItems[0] as AppItem;
+                src= orgItem.version;
             }
-            else if (appType == AppType.nginx)
-            {
-                this.filterItems(this.nginxList, list);
-            }
-        }
-
-        private void phpSelector_DropDownOpened(object sender, EventArgs e)
-        {
-            this.refreshItemSource("phpList",AppType.php);
+            AppItem destItem = e.AddedItems[0] as AppItem;
+            MessageBox.Show(src+"=>"+destItem.version);
         }
     }
 }
