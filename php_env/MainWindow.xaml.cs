@@ -14,30 +14,40 @@ namespace php_env
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
-        public string basePath;
-        public ObservableCollection<PhpItem> phpList;
-        public ObservableCollection<NginxItem> nginxList;
-        public ObservableCollection<VcItem> vcList;
+        private string basePath;
+        public ObservableCollection<AppItem> phpList;
+        public ObservableCollection<AppItem> nginxList;
+        public ObservableCollection<AppItem> vcList;
 
         public MainWindow()
         {
             InitializeComponent();
         }
 
-        /// <summary>
-        /// 获取应用所在目录
-        /// </summary>
-        /// <param name="appType">应用类型</param>
-        /// <param name="appVersion">应用版本</param>
-        /// <returns></returns>
         public string getAppPath(AppType appType, string appVersion)
         {
             return this.basePath + @"app\" + Enum.GetName(typeof(AppType), appType) + @"\" + appVersion;
         }
 
-        public string getZipPath(AppType appType, string appVersion,bool isTmpPath=true)
+        /// <summary>
+        /// 获取应用所在目录
+        /// </summary>
+        /// <param name="appItem">应用对象</param>
+        /// <returns></returns>
+        public string getAppPath(AppItem appItem)
         {
-            string path=this.basePath + @"download\" + Enum.GetName(typeof(AppType), appType) + @"\" + appVersion;
+            return this.getAppPath(appItem.type, appItem.version);
+        }
+
+        /// <summary>
+        /// 获取应用压缩包保存路径
+        /// </summary>
+        /// <param name="appItem">应用对象</param>
+        /// <param name="isTmpPath">是否为临时路径</param>
+        /// <returns></returns>
+        public string getZipPath(AppItem appItem, bool isTmpPath = true)
+        {
+            string path = this.basePath + @"download\" + Enum.GetName(typeof(AppType), appItem.type) + @"\" + appItem.version;
             if (isTmpPath)
             {
                 path += @".zip.tmp";
@@ -47,6 +57,16 @@ namespace php_env
                 path += @".zip";
             }
             return path;
+        }
+
+        /// <summary>
+        /// 获取默认的配置文件保存目录
+        /// </summary>
+        /// <param name="appItem">应用对象</param>
+        /// <returns></returns>
+        public string getDefaultConfigPath(AppItem appItem)
+        {
+            return this.basePath + @"default_config\" + Enum.GetName(typeof(AppType), appItem.type);
         }
 
         /// <summary>
@@ -78,9 +98,9 @@ namespace php_env
             }
         }
 
-        public void showErrorMessage(string err)
+        public void showErrorMessage(string err, string title = "出错了")
         {
-            MessageBox.Show(err, "出错了", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(err, title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         private void loadXmlData()
@@ -89,36 +109,33 @@ namespace php_env
             try
             {
                 doc.Load(basePath + "resource.xml");
-                XmlElement phpListXmlItem = doc.GetElementsByTagName("php_list").Item(0) as XmlElement;
-                XmlElement nginxListXmlItem = doc.GetElementsByTagName("nginx_list").Item(0) as XmlElement;
-                XmlElement vcListXmlItem = doc.GetElementsByTagName("vc_list").Item(0) as XmlElement;
                 //
-                XmlNodeList phpListXml = phpListXmlItem.GetElementsByTagName("php");
-                XmlNodeList nginxListXml = nginxListXmlItem.GetElementsByTagName("nginx");
-                XmlNodeList vcListXml = vcListXmlItem.GetElementsByTagName("vc");
+                XmlNodeList phpListXml = doc.DocumentElement["php"].GetElementsByTagName("item");
+                XmlNodeList nginxListXml = doc.DocumentElement["nginx"].GetElementsByTagName("item");
+                XmlNodeList vcListXml = doc.DocumentElement["vc"].GetElementsByTagName("item");
                 //
                 int i;
-                this.phpList = new ObservableCollection<PhpItem>();
+                this.phpList = new ObservableCollection<AppItem>();
                 for (i = 0; i < phpListXml.Count; i++)
                 {
                     XmlElement tmp = phpListXml.Item(i) as XmlElement;
                     DirectoryInfo d = new DirectoryInfo(this.getAppPath(AppType.php, tmp.GetAttribute("version")));
-                    PhpItem tmp1 = new PhpItem(tmp.GetAttribute("version"), tmp.GetAttribute("vc"), tmp.InnerText, d.Exists);
+                    AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.GetAttribute("vc"), tmp.InnerText, AppType.php, d.Exists);
                     this.phpList.Add(tmp1);
                 }
-                this.nginxList = new ObservableCollection<NginxItem>();
+                this.nginxList = new ObservableCollection<AppItem>();
                 for (i = 0; i < nginxListXml.Count; i++)
                 {
                     XmlElement tmp = nginxListXml.Item(i) as XmlElement;
                     DirectoryInfo d = new DirectoryInfo(this.getAppPath(AppType.nginx, tmp.GetAttribute("version")));
-                    NginxItem tmp1 = new NginxItem(tmp.GetAttribute("version"), tmp.InnerText, d.Exists);
+                    AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.InnerText, AppType.nginx, d.Exists);
                     this.nginxList.Add(tmp1);
                 }
-                this.vcList = new ObservableCollection<VcItem>();
+                this.vcList = new ObservableCollection<AppItem>();
                 for (i = 0; i < vcListXml.Count; i++)
                 {
                     XmlElement tmp = vcListXml.Item(i) as XmlElement;
-                    VcItem tmp1 = new VcItem(tmp.GetAttribute("version"), tmp.InnerText);
+                    AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.InnerText, AppType.vc);
                     this.vcList.Add(tmp1);
                 }
             }

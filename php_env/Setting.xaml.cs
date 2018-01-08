@@ -1,6 +1,7 @@
 ﻿using MahApps.Metro.Controls;
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
@@ -49,87 +50,288 @@ namespace php_env
             progressBar.Value = processed;
         }
 
-        private async void phpAction(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// 任务失败时执行
+        /// </summary>
+        /// <param name="message">错误消息</param>
+        private void onItemTaskFailed(AppItem appItem,string message,string title="出错了")
         {
-            PhpItem s = ((Button)sender).DataContext as PhpItem;
             MainWindow mainWin = this.Owner as MainWindow;
-            this.phpList.IsEnabled = false;
-            if (s.installed)
+            //
+            DataGrid dataGrid = null;
+            Label statusText = null;
+            MetroProgressBar progressBar = null;
+            //组件
+            if (appItem.type == AppType.php)
             {
-                this.showPendingStatus(this.phpStatusText, this.phpStatus, "正在卸载php" + s.version);
-                string err = "";
-                bool result = await Task.Run(new Func<bool>(() =>
-                  {
-                      DirectoryInfo d = new DirectoryInfo(mainWin.getAppPath(AppType.php, s.version));
-                      try
-                      {
-
-                          if (d.Exists)
-                          {
-                              d.Delete(true);
-                          }
-                      }
-                      catch (Exception e1)
-                      {
-                          err = e1.Message;
-                          return false;
-                      }
-                      return true;
-                  }));
-                //
-                this.showCommonStatus(this.phpStatusText, this.phpStatus);
-                if (result)
-                {
-                    s.installed = false;
-                }
-                else
-                {
-                    mainWin.showErrorMessage(err);
-                }
+                dataGrid = this.phpList;
+                statusText = this.phpStatusText;
+                progressBar = this.phpStatus;
+            }
+            else if (appItem.type == AppType.nginx)
+            {
+                dataGrid = this.nginxList;
+                statusText = this.nginxStatusText;
+                progressBar = this.nginxStatus;
             }
             else
             {
-                string zipPath = mainWin.getZipPath(AppType.php, s.version, false);
-                string zipTmpPath = mainWin.getZipPath(AppType.php, s.version);
+            }
+            dataGrid.IsEnabled = true;
+            mainWin.showErrorMessage(message);
+        }
+
+        private void onItemTaskFailed(AppItem appItem, TaskResult result, string title = "出错了")
+        {
+            this.onItemTaskFailed(appItem, result.message, title);
+        }
+
+        /// <summary>
+        /// 处理安装或者卸载
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void mainAction(object sender, RoutedEventArgs e)
+        {
+            AppItem appItem = ((Button)sender).DataContext as AppItem;
+            MainWindow mainWin = this.Owner as MainWindow;
+            string appPath = mainWin.getAppPath(appItem);
+            DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
+            string appName = Enum.GetName(typeof(AppType), appItem.type) + appItem.version;
+            //
+            DataGrid dataGrid = null;
+            Label statusText = null;
+            MetroProgressBar progressBar = null;
+            //组件
+            if (appItem.type == AppType.php)
+            {
+                dataGrid = this.phpList;
+                statusText = this.phpStatusText;
+                progressBar = this.phpStatus;
+            }
+            else if (appItem.type == AppType.nginx)
+            {
+                dataGrid = this.nginxList;
+                statusText = this.nginxStatusText;
+                progressBar = this.nginxStatus;
+            }
+            else
+            {
+            }
+            //表格禁用
+            dataGrid.IsEnabled = false;
+            TaskResult result;
+            if (appItem.installed)
+            {
+                /*卸载*/
+                this.showPendingStatus(statusText, progressBar, "正在卸载" + appName);
+                result = await this.deleteDir(appPathInfo);
+                this.showCommonStatus(statusText, progressBar);
+                if (!result.success)
+                {
+                    this.onItemTaskFailed(appItem, result);
+                    return;
+                }
+                appItem.installed = false;
+            }
+            else
+            {
+                /*安装*/
+                string zipPath = mainWin.getZipPath(appItem, false);
+                string zipTmpPath = mainWin.getZipPath(appItem);
                 FileInfo zipPathInfo = new FileInfo(zipPath);
-                string err = "";
-                bool result;
+
                 if (!zipPathInfo.Exists)
                 {
                     //下载文件
-                    this.showPendingStatus(this.phpStatusText, this.phpStatus, "下载php" + s.version);
-                    result = await Task.Run(new Func<bool>(() =>
+                    this.showPendingStatus(statusText, progressBar, "下载" + appName);
+                    result = await this.downloadFileAsync(appItem.downloadUrl, zipTmpPath, new Action<long, long>((long processed, long total) =>
+                    {
+                        this.Dispatcher.Invoke(() =>
+                        {
+                            if (total != -1)
+                            {
+                                this.showProcessStatus(statusText, progressBar, "下载" + appName, processed, total);
+                            }
+                        });
+                    }));
+                    if (!result.success)
+                    {
+                        //下载文件出错
+                        this.onItemTaskFailed(appItem, result,"下载文件出错");
+                        return;
+                    }
+                    try
+                    {
+                        //copy临时文件
+                        FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
+                        zipTmpPathInfo.CopyTo(zipPath, true);
+                        //删除临时文件
+                        zipTmpPathInfo.Delete();
+                    }
+                    catch (Exception e1)
+                    {
+                        this.onItemTaskFailed(appItem, e1.Message, "移动临时文件出错");
+                        return;
+                    }
+                }
+                //创建目录
+                if (!appPathInfo.Exists)
+                {
+                    this.showPendingStatus(statusText, progressBar, "正在创建目录");
+                    try
+                    {
+                        appPathInfo.Create();
+                    }
+                    catch (Exception e1)
+                    {
+                        this.onItemTaskFailed(appItem, e1.Message, "创建应用目录失败");
+                        return;
+                    }
+                }
+                this.showPendingStatus(statusText, progressBar, "正在解压" + appName);
+                //解压
+                result = await this.extractFileAsync(zipPath, appPath);
+                if (!result.success)
+                {
+                    //解压文件出错
+                    this.onItemTaskFailed(appItem, result, "解压文件出错");
+                    return;
+                }
+                //处理文件
+                this.showPendingStatus(statusText, progressBar, "正在安装" + appName);
+                if (appItem.type == AppType.php)
+                {
+                    FileInfo phpIniFile = new FileInfo(appPath + @"\php.ini-development");
+                    if (phpIniFile.Exists)
                     {
                         try
                         {
-                            this.downloadFile(s.downloadUrl, zipTmpPath, new Action<long, long>((long processed, long total) =>
-                            {
-                                this.Dispatcher.Invoke(() =>
-                                {
-                                    if (total != -1)
-                                    {
-                                        this.showProcessStatus(this.phpStatusText, this.phpStatus,"下载php" + s.version,processed, total);
-                                    }
-                                });
-                            }));
-                            //重命名
-                            FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
-                            zipTmpPathInfo.CopyTo(zipTmpPath, true);
+                            phpIniFile.CopyTo(appPath + @"\php.ini", true);
                         }
                         catch (Exception e1)
                         {
-                            err = e1.Message;
-                            return false;
+                            //copy文件出错
+                            this.onItemTaskFailed(appItem, e1.Message, "处理php.ini出错");
+                            return;
                         }
-                        return true;
-                    }));
+                    }
                 }
-                //解压
-                //...
-                //
-                s.installed = true;
+                else if (appItem.type == AppType.nginx)
+                {
+                    DirectoryInfo[] dirs = appPathInfo.GetDirectories();
+                    result = await this.copyFiles(dirs[0], appPathInfo);
+                    if (!result.success)
+                    {
+                        //移动文件出错
+                        this.onItemTaskFailed(appItem, result, "移动文件出错");
+                        return;
+                    }
+                    result = await this.deleteDir(dirs[0]);
+                    if (!result.success)
+                    {
+                        //删除临时文件夹出错
+                        this.onItemTaskFailed(appItem, result, "删除临时文件夹出错");
+                        return;
+                    }
+                    //复制配置文件
+                    result = await this.copyFiles(new DirectoryInfo(mainWin.getDefaultConfigPath(appItem)),new DirectoryInfo(appPath+@"\conf"));
+                    if (!result.success)
+                    {
+                        this.onItemTaskFailed(appItem, result, "复制配置文件出错");
+                        return;
+                    }
+                }
+                //任务完成
+                this.showCommonStatus(statusText, progressBar);
+                appItem.installed = true;
             }
-            this.phpList.IsEnabled = true;
+            dataGrid.IsEnabled = true;
+        }
+
+        /// <summary>
+        /// 删除目录
+        /// </summary>
+        /// <param name="srcPath"></param>
+        /// <returns></returns>
+        public Task<TaskResult> deleteDir(DirectoryInfo path)
+        {
+            return Task<TaskResult>.Run(() =>
+            {
+
+                try
+                {
+
+                    if (path.Exists)
+                    {
+                        path.Delete(true);
+                    }
+                }
+                catch (Exception e1)
+                {
+                    return new TaskResult(e1);
+                }
+                return new TaskResult();
+            });
+        }
+
+        /// <summary>
+        /// 复制文件
+        /// </summary>
+        /// <param name="srcPath">源文件夹目录</param>
+        /// <param name="distPath">目标文件夹目录</param>
+        /// <returns></returns>
+        private Task<TaskResult> copyFiles(DirectoryInfo srcPath, DirectoryInfo distPath)
+        {
+            return Task<TaskResult>.Run(async () =>
+            {
+                try
+                {
+                    if (!distPath.Exists)
+                    {
+                        distPath.Create();
+                    }
+                    //复制文件
+                    FileInfo[] files = srcPath.GetFiles();
+                    int i;
+                    for (i = 0; i < files.Length; i++)
+                    {
+                        files[i].CopyTo(distPath.FullName + @"\" + files[i].Name,true);
+                    }
+                    //复制目录
+                    DirectoryInfo[] dirs = srcPath.GetDirectories();
+                    TaskResult result;
+                    for (i = 0; i < dirs.Length; i++)
+                    {
+                        result = await this.copyFiles(dirs[i], new DirectoryInfo(distPath.FullName + @"\" + dirs[i].Name));
+                        if (!result.success)
+                        {
+                            return result;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    return new TaskResult(e);
+                }
+                return new TaskResult();
+            });
+        }
+
+        private Task<TaskResult> extractFileAsync(string zipPath, string savePath)
+        {
+            return Task<TaskResult>.Run(() =>
+            {
+                try
+                {
+                    ZipFile.ExtractToDirectory(zipPath, savePath);
+                }
+                catch (Exception e)
+                {
+                    return new TaskResult(e);
+                }
+                return new TaskResult();
+            });
         }
 
         /// <summary>
@@ -138,83 +340,65 @@ namespace php_env
         /// <param name="url">文件的URL地址</param>
         /// <param name="savePath">文件的保存路径</param>
         /// <param name="onFileSizeChange">当文件大小发生改变时执行</param>
-        private void downloadFile(string url, string savePath, Action<long, long> onFileSizeChange)
+        private Task<TaskResult> downloadFileAsync(string url, string savePath, Action<long, long> onFileSizeChange)
         {
-            try
+            return Task<TaskResult>.Run(() =>
             {
-                //如果文件存在则删除文件
-                FileInfo savePathInfo = new FileInfo(savePath);
-                if (savePathInfo.Exists)
+                try
                 {
-                    savePathInfo.Delete();
-                }
-                else
-                {
-                    DirectoryInfo saveDir = savePathInfo.Directory;
-                    if (!saveDir.Exists)
+                    //如果文件存在则删除文件
+                    FileInfo savePathInfo = new FileInfo(savePath);
+                    if (savePathInfo.Exists)
                     {
-                        saveDir.Create();
+                        savePathInfo.Delete();
                     }
-                }
-                //
-                HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
-                using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
-                {
-                    long processed = 0;
-                    long total = response.ContentLength;
-                    using (Stream stream = response.GetResponseStream())
+                    else
                     {
-                        using (FileStream fs = new FileStream(savePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                        DirectoryInfo saveDir = savePathInfo.Directory;
+                        if (!saveDir.Exists)
                         {
-                            byte[] bArr = new byte[1024];
-                            int size = stream.Read(bArr, 0, bArr.Length);
-                            while (size > 0)
+                            saveDir.Create();
+                        }
+                    }
+                    //
+                    HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
+                    using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+                    {
+                        long processed = 0;
+                        long total = response.ContentLength;
+                        using (Stream stream = response.GetResponseStream())
+                        {
+                            using (FileStream fs = new FileStream(savePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
                             {
-                                fs.Write(bArr, 0, size);
-                                //更新下载数据的界面
-                                processed += (long)size;
-                                onFileSizeChange(processed, total);
-                                //
-                                size = stream.Read(bArr, 0, bArr.Length);
+                                byte[] bArr = new byte[1024];
+                                int size = stream.Read(bArr, 0, bArr.Length);
+                                while (size > 0)
+                                {
+                                    fs.Write(bArr, 0, size);
+                                    //更新下载数据的界面
+                                    processed += (long)size;
+                                    onFileSizeChange(processed, total);
+                                    //
+                                    size = stream.Read(bArr, 0, bArr.Length);
+                                }
                             }
                         }
                     }
+
                 }
-
-            }
-            catch (Exception e)
-            {
-                throw e;
-            }
+                catch (Exception e)
+                {
+                    return new TaskResult(e);
+                }
+                return new TaskResult();
+            });
         }
 
-        private void nginxAction(object sender, RoutedEventArgs e)
+        private void viewAction(object sender, RoutedEventArgs e)
         {
-            NginxItem s = ((Button)sender).DataContext as NginxItem;
-            if (s.installed)
-            {
-                MessageBox.Show("执行卸载");
-                s.installed = false;
-            }
-            else
-            {
-                MessageBox.Show(s.downloadUrl);
-                s.installed = true;
-            }
-        }
-
-        private void viewPhpPath(object sender, RoutedEventArgs e)
-        {
+            AppItem appItem = ((Button)sender).DataContext as AppItem;
             MainWindow mainWin = this.Owner as MainWindow;
-            PhpItem s = ((Button)sender).DataContext as PhpItem;
-            System.Diagnostics.Process.Start(@"explorer.exe ", mainWin.getAppPath(AppType.php, s.version));
-        }
-
-        private void viewNginxPath(object sender, RoutedEventArgs e)
-        {
-            MainWindow mainWin = this.Owner as MainWindow;
-            NginxItem s = ((Button)sender).DataContext as NginxItem;
-            System.Diagnostics.Process.Start(@"explorer.exe ", mainWin.getAppPath(AppType.nginx, s.version));
+            System.Diagnostics.Process.Start(@"explorer.exe ", mainWin.getAppPath(appItem));
         }
     }
 }
