@@ -1,15 +1,30 @@
 <root>
-  <php>
+  <!--安装php时默认安装的扩展-->
+  <php_extension>
+    <item>openssl</item>
+    <item>gd2</item>
+    <item>curl</item>
+    <item>mbstring</item>
+    <item>mysqli</item>
+    <item>sockets</item>
+    <item>pdo_mysql</item>
+    <item>pdo_sqlite</item>
+    <item>pdo_pgsql</item>
+  </php_extension>
+  <!--php版本列表-->
+  <php upload_max_filesize="20M">
     <item version="7.2.1" vc="15">http://windows.php.net/downloads/releases/php-7.2.1-nts-Win32-VC15-x64.zip</item>
     <item version="7.1.13" vc="14">http://windows.php.net/downloads/releases/php-7.1.13-nts-Win32-VC14-x64.zip</item>
     <item version="7.0.27" vc="14">http://windows.php.net/downloads/releases/php-7.0.27-Win32-VC14-x64.zip</item>
     <item version="5.6.33" vc="11">http://windows.php.net/downloads/releases/php-5.6.33-nts-Win32-VC11-x64.zip</item>
     <item version="5.5.38" vc="11">http://windows.php.net/downloads/releases/archives/php-5.5.38-Win32-VC11-x64.zip</item>
   </php>
+  <!--nginx版本列表-->
   <nginx>
     <item version="1.13.8">http://nginx.org/download/nginx-1.13.8.zip</item>
     <item version="1.12.2">http://nginx.org/download/nginx-1.12.2.zip</item>
   </nginx>
+  <!--vc库列表-->
   <vc>
     <item version="15">https://go.microsoft.com/fwlink/?LinkId=746572</item>
     <item version="14">https://www.microsoft.com/zh-CN/download/details.aspx?id=48145</item>

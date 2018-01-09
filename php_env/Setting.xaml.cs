@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -130,7 +131,7 @@ namespace php_env
                 /*卸载*/
                 if (appItem.isRunning)
                 {
-                    this.onItemTaskFailed(appItem, appName+"正在运行中无法卸载");
+                    this.onItemTaskFailed(appItem, appName + "正在运行中无法卸载");
                     return;
                 }
                 this.showPendingStatus(statusText, progressBar, "正在卸载" + appName);
@@ -221,9 +222,16 @@ namespace php_env
                         catch (Exception e1)
                         {
                             //copy文件出错
-                            this.onItemTaskFailed(appItem, e1.Message, "处理php.ini出错");
+                            this.onItemTaskFailed(appItem, e1.Message, "复制php.ini出错");
                             return;
                         }
+                    }
+                    //初始化配置文件
+                    result = await this.initAppConfig(appItem);
+                    if (!result.success)
+                    {
+                        this.onItemTaskFailed(appItem, result, "复制配置文件出错");
+                        return;
                     }
                 }
                 else if (appItem.type == AppType.nginx)
@@ -250,6 +258,13 @@ namespace php_env
                         this.onItemTaskFailed(appItem, result, "复制配置文件出错");
                         return;
                     }
+                    //初始化配置文件
+                    result = await this.initAppConfig(appItem);
+                    if (!result.success)
+                    {
+                        this.onItemTaskFailed(appItem, result, "复制配置文件出错");
+                        return;
+                    }
                 }
                 //任务完成
                 this.showCommonStatus(statusText, progressBar);
@@ -257,6 +272,50 @@ namespace php_env
             }
             dataGrid.IsEnabled = true;
             this.taskCount--;
+        }
+
+        /// <summary>
+        /// 初始化配置文件
+        /// </summary>
+        /// <param name="appItem">应用对象</param>
+        /// <returns></returns>
+        private Task<TaskResult> initAppConfig(AppItem appItem)
+        {
+            MainWindow mainWin = this.Owner as MainWindow;
+            string configPath = mainWin.getDefaultAppConfPath(appItem);
+            return Task<TaskResult>.Run(() =>
+            {
+
+                try
+                {
+
+                    UTF8Encoding encoding = new UTF8Encoding();
+                    string fileContent = File.ReadAllText(configPath, encoding);
+                    if (appItem.type == AppType.php)
+                    {
+                        fileContent = fileContent.Replace(";cgi.fix_pathinfo=1", "cgi.fix_pathinfo=0")
+                        .Replace("; extension_dir = \"ext\"", "extension_dir = \"ext\"")
+                        .Replace("upload_max_filesize = 2M", "upload_max_filesize = "+mainWin.phpUploadMaxFilesize);
+                        foreach(string extName in mainWin.phpExtensions)
+                        {
+                            fileContent = fileContent.Replace(";extension=php_" + extName, "extension=php_" + extName);//老版本
+                            fileContent = fileContent.Replace(";extension=" + extName, "extension=" + extName);//新版本
+                        }
+                    }
+                    else if (appItem.type == AppType.nginx)
+                    {
+                        //{{path}}替换为web目录
+                        string webPath = mainWin.getDefaultWebPath();
+                        fileContent = fileContent.Replace("{{path}}", webPath.Replace("\\", "/"));
+                    }
+                    File.WriteAllText(configPath, fileContent, encoding);
+                }
+                catch (Exception e1)
+                {
+                    return new TaskResult(e1);
+                }
+                return new TaskResult();
+            });
         }
 
         /// <summary>

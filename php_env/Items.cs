@@ -100,7 +100,7 @@ namespace php_env
         {
             get
             {
-                return this.installed ? "已安装" : "未安装";
+                return this.installed ? ("已安装"+(this.isRunning?"[运行中]":"")) : "未安装";
             }
         }
 

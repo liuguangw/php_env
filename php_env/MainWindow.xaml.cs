@@ -2,6 +2,7 @@
 #define APP_DEBUG 
 using MahApps.Metro.Controls;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -22,11 +23,21 @@ namespace php_env
         public ObservableCollection<AppItem> nginxList;
         public ObservableCollection<AppItem> vcList;
 
+        /// <summary>
+        /// 默认开启的PHP扩展
+        /// </summary>
+        public List<string> phpExtensions;
+        /// <summary>
+        /// php默认的上传文件大小限制
+        /// </summary>
+        public string phpUploadMaxFilesize = "8M";
+
         public MainWindow()
         {
             this.Resources["phpList"] = this.phpList = new ObservableCollection<AppItem>();
             this.Resources["nginxList"] = this.nginxList = new ObservableCollection<AppItem>();
             this.vcList = new ObservableCollection<AppItem>();
+            this.phpExtensions = new List<string>();
             this.Resources["phpStatus"] = new AppStatus();
             this.Resources["nginxStatus"] = new AppStatus();
             InitializeComponent();
@@ -35,6 +46,31 @@ namespace php_env
         public string getAppPath(AppType appType, string appVersion)
         {
             return this.basePath + @"app\" + Enum.GetName(typeof(AppType), appType) + @"\" + appVersion;
+        }
+
+        /// <summary>
+        /// 获取默认的网站目录
+        /// </summary>
+        /// <returns></returns>
+        public string getDefaultWebPath()
+        {
+            return this.basePath + @"websites\localhost\public_html";
+        }
+
+        /// <summary>
+        /// 获取nginx/php配置文件路径
+        /// </summary>
+        /// <returns></returns>
+        public string getDefaultAppConfPath(AppItem appItem)
+        {
+            if (appItem.type == AppType.php)
+            {
+                return this.getAppPath(appItem) + @"\php.ini";
+            }
+            else
+            {
+                return this.getAppPath(appItem) + @"\conf\vhost\localhost.conf";
+            }
         }
 
         /// <summary>
@@ -98,9 +134,12 @@ namespace php_env
         {
             AppStatus phpStatus = this.Resources["phpStatus"] as AppStatus;
             AppStatus nginxStatus = this.Resources["nginxStatus"] as AppStatus;
-            if (phpStatus.isRunning || nginxStatus.isRunning) {
-                if (MessageBoxResult.Yes == MessageBox.Show("服务器正在运行,退出时服务器也会停止,你确定要退出吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning)) {
-                    if (phpStatus.isRunning) {
+            if (phpStatus.isRunning || nginxStatus.isRunning)
+            {
+                if (MessageBoxResult.Yes == MessageBox.Show("服务器正在运行,退出时服务器也会停止,你确定要退出吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning))
+                {
+                    if (phpStatus.isRunning)
+                    {
                         await this.stopApp(phpStatus.appItem);
                     }
                     if (nginxStatus.isRunning)
@@ -142,25 +181,33 @@ namespace php_env
                 XmlNodeList vcListXml = doc.DocumentElement["vc"].GetElementsByTagName("item");
                 //
                 int i;
-                for (i = 0; i < phpListXml.Count; i++)
+                foreach (XmlElement tmp in phpListXml)
                 {
-                    XmlElement tmp = phpListXml.Item(i) as XmlElement;
                     DirectoryInfo d = new DirectoryInfo(this.getAppPath(AppType.php, tmp.GetAttribute("version")));
                     AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.GetAttribute("vc"), tmp.InnerText, AppType.php, d.Exists);
                     this.phpList.Add(tmp1);
                 }
-                for (i = 0; i < nginxListXml.Count; i++)
+                foreach (XmlElement tmp in nginxListXml)
                 {
-                    XmlElement tmp = nginxListXml.Item(i) as XmlElement;
                     DirectoryInfo d = new DirectoryInfo(this.getAppPath(AppType.nginx, tmp.GetAttribute("version")));
                     AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.InnerText, AppType.nginx, d.Exists);
                     this.nginxList.Add(tmp1);
                 }
-                for (i = 0; i < vcListXml.Count; i++)
+                foreach (XmlElement tmp in vcListXml)
                 {
-                    XmlElement tmp = vcListXml.Item(i) as XmlElement;
                     AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.InnerText, AppType.vc);
                     this.vcList.Add(tmp1);
+                }
+                //php相关配置初始化
+                string uploadMaxFilesize = doc.DocumentElement["php"].GetAttribute("upload_max_filesize");
+                if (uploadMaxFilesize != null)
+                {
+                    this.phpUploadMaxFilesize = uploadMaxFilesize;
+                }
+                XmlNodeList extensionListXml = doc.DocumentElement["php_extension"].GetElementsByTagName("item");
+                foreach (XmlElement tmp in extensionListXml)
+                {
+                    this.phpExtensions.Add(tmp.InnerText);
                 }
             }
             catch (FileNotFoundException e1)
@@ -220,7 +267,7 @@ namespace php_env
                         appStatus = this.Resources["phpStatus"] as AppStatus;
                         appStatus.appItem = appItem;
                         appStatus.process = myProcess;
-                        myProcess.StartInfo.FileName =@"php-cgi.exe";
+                        myProcess.StartInfo.FileName = @"php-cgi.exe";
                         myProcess.StartInfo.Arguments = "-b 127.0.0.1:6757";
                         myProcess.Start();
                     }
@@ -248,7 +295,7 @@ namespace php_env
             {
                 try
                 {
-                    
+
                     AppStatus appStatus;
                     if (appItem.type == AppType.php)
                     {
