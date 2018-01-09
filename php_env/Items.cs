@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows.Data;
 
@@ -60,6 +61,7 @@ namespace php_env
         public string vcVersion { get; }
         public string downloadUrl { get; }
         public AppType type { get; }
+        public bool isRunning { get; set; }
         private bool _installed;
         public bool installed
         {
@@ -73,20 +75,57 @@ namespace php_env
                 {
                     this._installed = value;
                     this.Changed("installed");
+                    this.Changed("selectionName");
+                    this.Changed("statusText");
+                    this.Changed("commandText");
                 }
             }
         }
 
-        public AppItem(string version, string vcVersion, string downloadUrl, AppType type, bool installed)
+        /// <summary>
+        /// 下拉框文本
+        /// </summary>
+        public string selectionName
+        {
+            get
+            {
+                return this.version + (this.installed ? "" : "[未安装]");
+            }
+        }
+
+        /// <summary>
+        /// 安装状态文本
+        /// </summary>
+        public string statusText
+        {
+            get
+            {
+                return this.installed ? "已安装" : "未安装";
+            }
+        }
+
+        /// <summary>
+        /// 对应的按钮文本
+        /// </summary>
+        public string commandText
+        {
+            get
+            {
+                return this.installed ? "卸载" : "安装";
+            }
+        }
+
+        public AppItem(string version, string vcVersion, string downloadUrl, AppType type, bool installed, bool isRunning = false)
         {
             this.version = version;
             this.vcVersion = vcVersion;
             this.downloadUrl = downloadUrl;
             this.type = type;
             this.installed = installed;
+            this.isRunning = isRunning;
         }
 
-        public AppItem(string version, string downloadUrl, AppType type, bool installed) : this(version, "", downloadUrl, type, installed)
+        public AppItem(string version, string downloadUrl, AppType type, bool installed, bool isRunning = false) : this(version, "", downloadUrl, type, installed, isRunning)
         { }
 
 
@@ -102,66 +141,87 @@ namespace php_env
                 PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
             }
         }
+
     }
-
-    /// <summary>
-    /// 安装状态显示转换
-    /// </summary>
-    public class InstallResultConverter : IValueConverter
+    public class AppStatus : INotifyPropertyChanged
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        private bool _isRunning;
+        public bool isRunning
         {
-            if ((bool)value)
+            get
             {
-                return "已安装";
+                return this._isRunning;
             }
-            else
+            set
             {
-                return "未安装";
+                if (this._isRunning != value)
+                {
+                    this._isRunning = value;
+                    this.Changed("isRunning");
+                    this.Changed("commandName");
+                    this.Changed("canSelect");
+                }
             }
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            string r = value as string;
-            if (r == "已安装")
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-    }
-
-    /// <summary>
-    /// 安装按钮文本显示转换
-    /// </summary>
-    public class InstallButtonConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if ((bool)value)
-            {
-                return "卸载";
-            }
-            else
-            {
-                return "安装";
+        /// <summary>
+        /// 应用对应的命令文本
+        /// </summary>
+        public string commandName {
+            get {
+                return this._isRunning ? "停止" : "启动";
             }
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            string r = value as string;
-            if (r == "卸载")
-            {
-                return true;
+        /// <summary>
+        /// 绑定是否可以切换App版本
+        /// </summary>
+        public bool canSelect {
+            get { return !this.isRunning; }
+        }
+
+        /// <summary>
+        /// 正在运行的对象
+        /// </summary>
+        public AppItem appItem;
+        private Process _process;
+
+        /// <summary>
+        /// 正在运行的进程
+        /// </summary>
+        public Process process {
+            get { return this._process; }
+            set {
+                if (this._process != value) {
+                    if (this._process != null) {
+                        this.process.Exited -= this.handler;
+                    }
+                    value.EnableRaisingEvents = true;
+                    value.Exited += this.handler;
+                    this._process = value;
+                }
             }
-            else
+        }
+        private EventHandler handler;
+
+        private void myProcess_Exited(object sender, EventArgs e)
+        {
+            this.isRunning = false;
+            this.appItem.isRunning = false;
+        }
+
+        public AppStatus(bool isRunning = false)
+        {
+            this.isRunning = isRunning;
+            this.handler= new EventHandler(myProcess_Exited);
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void Changed(String propertyName)
+        {
+            if (PropertyChanged != null)
             {
-                return false;
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
             }
         }
     }

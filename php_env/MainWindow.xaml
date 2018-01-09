@@ -23,27 +23,31 @@
             </Button>
         </Controls:WindowCommands>
     </Controls:MetroWindow.RightWindowCommands>
-    <Grid Margin="15">
+    <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="2*"/>
             <RowDefinition Height="2*"/>
-            <RowDefinition Height="3*"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="2*"/>
-            <ColumnDefinition Width="6*"/>
-            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="5*"/>
+            <ColumnDefinition Width="3*"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <Label Grid.Column="1" VerticalAlignment="Center">php</Label>
-        <ComboBox Grid.Column="2" Name="phpSelector" VerticalAlignment="Center" ItemsSource="{StaticResource phpList}" SelectionChanged="phpSelector_SelectionChanged">
-            <ComboBox.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding version}" />
-                </DataTemplate>
-            </ComboBox.ItemTemplate>
+        <Label Grid.Row="1" Grid.Column="1" VerticalAlignment="Center">php</Label>
+        <Label Grid.Row="2" Grid.Column="1" VerticalAlignment="Center">nginx</Label>
+        <ComboBox Grid.Row="1" Grid.Column="2" Name="phpSelector" VerticalAlignment="Center" 
+                  ItemsSource="{StaticResource phpList}" DisplayMemberPath="selectionName" 
+                  SelectionChanged="selector_SelectionChanged" IsEnabled="{Binding Source={StaticResource phpStatus},Path=canSelect}">
         </ComboBox>
-        <Label Grid.Row="1" Grid.Column="1" VerticalAlignment="Center">nginx</Label>
+        <ComboBox Grid.Row="2" Grid.Column="2" Name="nginxSelector" VerticalAlignment="Center" 
+                  ItemsSource="{StaticResource nginxList}" DisplayMemberPath="selectionName" 
+                  SelectionChanged="selector_SelectionChanged" IsEnabled="{Binding Source={StaticResource nginxStatus},Path=canSelect}">
+        </ComboBox>
+        <Button Name="phpBtn" Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" Margin="5,3" Click="appBtn_Click" Content="{Binding Source={StaticResource phpStatus},Path=commandName}"/>
+        <Button Name="nginxBtn" Grid.Row="2" Grid.Column="3" VerticalAlignment="Center" Margin="5,3" Click="appBtn_Click" Content="{Binding Source={StaticResource nginxStatus},Path=commandName}"/>
     </Grid>
 </Controls:MetroWindow>

@@ -19,8 +19,6 @@ namespace php_env
         public Setting(MainWindow mainWin)
         {
             this.Owner = mainWin;
-            this.Resources.Add("statusConverter", new InstallResultConverter());
-            this.Resources.Add("btnConverter", new InstallButtonConverter());
             InitializeComponent();
             this.phpList.DataContext = mainWin.phpList;
             this.nginxList.DataContext = mainWin.nginxList;
@@ -130,6 +128,11 @@ namespace php_env
             if (appItem.installed)
             {
                 /*卸载*/
+                if (appItem.isRunning)
+                {
+                    this.onItemTaskFailed(appItem, appName+"正在运行中无法卸载");
+                    return;
+                }
                 this.showPendingStatus(statusText, progressBar, "正在卸载" + appName);
                 result = await this.deleteDir(appPathInfo);
                 this.showCommonStatus(statusText, progressBar);
@@ -405,7 +408,7 @@ namespace php_env
         {
             AppItem appItem = ((Button)sender).DataContext as AppItem;
             MainWindow mainWin = this.Owner as MainWindow;
-            System.Diagnostics.Process.Start(@"explorer.exe ", mainWin.getAppPath(appItem));
+            System.Diagnostics.Process.Start(@"explorer.exe", mainWin.getAppPath(appItem));
         }
 
         private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)

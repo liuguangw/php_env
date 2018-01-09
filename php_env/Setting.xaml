@@ -27,12 +27,12 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="php版本"  Binding="{Binding version}"/>
                         <DataGridTextColumn Header="vc版本" Binding="{Binding vcVersion}" />
-                        <DataGridTextColumn Header="状态" Binding="{Binding installed, Converter={StaticResource statusConverter}}"/>
+                        <DataGridTextColumn Header="状态" Binding="{Binding statusText}"/>
                         <DataGridTemplateColumn  Header="操作">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <Button Content="{Binding installed, Converter={StaticResource btnConverter}}" Click="mainAction" Padding="12,8"/>
+                                        <Button Content="{Binding commandText}" Click="mainAction" Padding="12,8"/>
                                         <Button Margin="10,0,0,0" IsEnabled="{Binding installed}" Click="viewAction">浏览目录</Button>
                                     </StackPanel>
                                 </DataTemplate>
@@ -65,12 +65,12 @@
                    ColumnWidth="*" Style="{StaticResource AzureDataGrid}" Height="262">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="nginx版本"  Binding="{Binding version}"/>
-                        <DataGridTextColumn Header="状态" Binding="{Binding installed, Converter={StaticResource statusConverter}}"/>
+                        <DataGridTextColumn Header="状态" Binding="{Binding statusText}"/>
                         <DataGridTemplateColumn  Header="操作">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <Button Content="{Binding installed, Converter={StaticResource btnConverter}}" Click="mainAction" Padding="12,8"/>
+                                        <Button Content="{Binding commandText}" Click="mainAction" Padding="12,8"/>
                                         <Button Margin="10,0,0,0" IsEnabled="{Binding installed}" Click="viewAction">浏览目录</Button>
                                     </StackPanel>
                                 </DataTemplate>

@@ -3,8 +3,11 @@
 using MahApps.Metro.Controls;
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Xml;
 
 namespace php_env
@@ -24,6 +27,8 @@ namespace php_env
             this.Resources["phpList"] = this.phpList = new ObservableCollection<AppItem>();
             this.Resources["nginxList"] = this.nginxList = new ObservableCollection<AppItem>();
             this.vcList = new ObservableCollection<AppItem>();
+            this.Resources["phpStatus"] = new AppStatus();
+            this.Resources["nginxStatus"] = new AppStatus();
             InitializeComponent();
         }
 
@@ -89,8 +94,27 @@ namespace php_env
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private async void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            AppStatus phpStatus = this.Resources["phpStatus"] as AppStatus;
+            AppStatus nginxStatus = this.Resources["nginxStatus"] as AppStatus;
+            if (phpStatus.isRunning || nginxStatus.isRunning) {
+                if (MessageBoxResult.Yes == MessageBox.Show("服务器正在运行,退出时服务器也会停止,你确定要退出吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning)) {
+                    if (phpStatus.isRunning) {
+                        await this.stopApp(phpStatus.appItem);
+                    }
+                    if (nginxStatus.isRunning)
+                    {
+                        await this.stopApp(nginxStatus.appItem);
+                    }
+                    e.Cancel = false;
+                }
+                else
+                {
+                    e.Cancel = true;
+                }
+                return;
+            }
             if (MessageBoxResult.Yes == MessageBox.Show("你确定要退出程序吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
             {
                 e.Cancel = false;
@@ -156,17 +180,142 @@ namespace php_env
             this.loadXmlData();
         }
 
-        private void phpSelector_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void selector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            ComboBox combo = sender as ComboBox;
             AppItem orgItem = null;
-            string src = "";
+            AppItem destItem = null;
+            if (e.AddedItems.Count > 0)
+            {
+                destItem = e.AddedItems[0] as AppItem;
+            }
+            else
+            {
+                return;
+            }
             if (e.RemovedItems.Count > 0)
             {
-                orgItem=e.RemovedItems[0] as AppItem;
-                src= orgItem.version;
+                orgItem = e.RemovedItems[0] as AppItem;
             }
-            AppItem destItem = e.AddedItems[0] as AppItem;
-            MessageBox.Show(src+"=>"+destItem.version);
+            if (!destItem.installed)
+            {
+                combo.SelectedItem = orgItem;//还原选择
+                this.showErrorMessage(destItem.version + "版本尚未安装");
+            }
+        }
+
+        private Task<TaskResult> runApp(AppItem appItem)
+        {
+            return Task<TaskResult>.Run(() =>
+            {
+                try
+                {
+                    string appPath = this.getAppPath(appItem);
+                    AppStatus appStatus;
+                    Process myProcess = new Process();
+                    myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
+                    myProcess.StartInfo.WorkingDirectory = appPath;//工作目录
+                    if (appItem.type == AppType.php)
+                    {
+                        appStatus = this.Resources["phpStatus"] as AppStatus;
+                        appStatus.appItem = appItem;
+                        appStatus.process = myProcess;
+                        myProcess.StartInfo.FileName =@"php-cgi.exe";
+                        myProcess.StartInfo.Arguments = "-b 127.0.0.1:6757";
+                        myProcess.Start();
+                    }
+                    else
+                    {
+                        appStatus = this.Resources["nginxStatus"] as AppStatus;
+                        appStatus.appItem = appItem;
+                        myProcess.StartInfo.FileName = @"nginx.exe";
+                        myProcess.Start();
+                    }
+                    appStatus.isRunning = true;
+                    appItem.isRunning = true;
+                }
+                catch (Exception e)
+                {
+                    return new TaskResult(e);
+                }
+                return new TaskResult();
+            });
+        }
+
+        private Task<TaskResult> stopApp(AppItem appItem)
+        {
+            return Task<TaskResult>.Run(() =>
+            {
+                try
+                {
+                    
+                    AppStatus appStatus;
+                    if (appItem.type == AppType.php)
+                    {
+                        appStatus = this.Resources["phpStatus"] as AppStatus;
+                        appStatus.process.Kill();
+                    }
+                    else
+                    {
+                        appStatus = this.Resources["nginxStatus"] as AppStatus;
+                        //nginx -s stop
+                        Process myProcess = new Process();
+                        myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
+                        myProcess.StartInfo.WorkingDirectory = this.getAppPath(appItem);//工作目录
+                        myProcess.StartInfo.FileName = @"nginx.exe";
+                        myProcess.StartInfo.Arguments = "-s stop";
+                        myProcess.Start();
+                        appStatus.isRunning = false;
+                        appItem.isRunning = false;
+                    }
+                }
+                catch (Exception e)
+                {
+                    return new TaskResult(e);
+                }
+                return new TaskResult();
+            });
+        }
+
+        /// <summary>
+        /// 启动或者停止应用
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void appBtn_Click(object sender, RoutedEventArgs e)
+        {
+            Button appButton = sender as Button;
+            ComboBox combo;
+            if (appButton.Name == "phpBtn")
+            {
+                combo = this.phpSelector;
+            }
+            else
+            {
+                combo = this.nginxSelector;
+            }
+            AppItem appItem = combo.SelectedItem as AppItem;
+            if (appItem == null)
+            {
+                this.showErrorMessage("请先选择版本");
+                return;
+            }
+            TaskResult result;
+            if (appItem.isRunning)
+            {
+                //停止
+                result = await this.stopApp(appItem);
+            }
+            else
+            {
+                //启动
+                result = await this.runApp(appItem);
+            }
+            if (!result.success)
+            {
+                this.showErrorMessage(result.message);
+                return;
+            }
         }
     }
 }
