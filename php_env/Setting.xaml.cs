@@ -1,5 +1,6 @@
 ﻿using MahApps.Metro.Controls;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -155,7 +156,7 @@ namespace php_env
                 {
                     //下载文件
                     this.showPendingStatus(statusText, progressBar, "下载" + appName);
-                    result = await this.downloadFileAsync(appItem.downloadUrl, zipTmpPath, new Action<long, long>((long processed, long total) =>
+                    result = await this.downloadFileAsync(appItem.downloadUrl, zipTmpPath, (long processed, long total) =>
                     {
                         this.Dispatcher.Invoke(() =>
                         {
@@ -164,7 +165,7 @@ namespace php_env
                                 this.showProcessStatus(statusText, progressBar, "下载" + appName, processed, total);
                             }
                         });
-                    }));
+                    });
                     if (!result.success)
                     {
                         //下载文件出错
@@ -295,8 +296,8 @@ namespace php_env
                     {
                         fileContent = fileContent.Replace(";cgi.fix_pathinfo=1", "cgi.fix_pathinfo=0")
                         .Replace("; extension_dir = \"ext\"", "extension_dir = \"ext\"")
-                        .Replace("upload_max_filesize = 2M", "upload_max_filesize = "+mainWin.phpUploadMaxFilesize);
-                        foreach(string extName in mainWin.phpExtensions)
+                        .Replace("upload_max_filesize = 2M", "upload_max_filesize = " + mainWin.phpUploadMaxFilesize);
+                        foreach (string extName in mainWin.phpExtensions)
                         {
                             fileContent = fileContent.Replace(";extension=php_" + extName, "extension=php_" + extName);//老版本
                             fileContent = fileContent.Replace(";extension=" + extName, "extension=" + extName);//新版本
@@ -403,6 +404,33 @@ namespace php_env
             });
         }
 
+        private Task<TaskResult> getFileMd5Async(string fileName)
+        {
+            return Task<TaskResult>.Run(() =>
+            {
+                try
+                {
+                    byte[] retVal;
+                    System.Security.Cryptography.MD5 md5 = new System.Security.Cryptography.MD5CryptoServiceProvider();
+                    using (FileStream file = new FileStream(fileName, FileMode.Open, FileAccess.Read))
+                    {
+                        retVal = md5.ComputeHash(file);
+                    }
+
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < retVal.Length; i++)
+                    {
+                        sb.Append(retVal[i].ToString("x2"));
+                    }
+                    return new TaskResult(true, sb.ToString());
+                }
+                catch (Exception e)
+                {
+                    return new TaskResult(e);
+                }
+            });
+        }
+
         /// <summary>
         /// 下载文件
         /// </summary>
@@ -487,6 +515,107 @@ namespace php_env
         {
             AppItem appItem = ((TextBlock)sender).DataContext as AppItem;
             System.Diagnostics.Process.Start(appItem.downloadUrl);
+        }
+
+        /// <summary>
+        /// 项目主页跳转
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            System.Diagnostics.Process.Start(e.Uri.AbsoluteUri);
+        }
+
+        private async void updateResource(object sender, RoutedEventArgs e)
+        {
+            Button btn = sender as Button;
+            MainWindow mainWin = this.Owner as MainWindow;
+            string resourceXmlPath = mainWin.getResourceXmlPath();
+            string resourceXmlTmpPath = mainWin.getResourceXmlPath(true);
+            btn.IsEnabled = false;
+            this.updateProgressBar.Visibility = Visibility.Visible;
+            TaskResult result = await this.downloadFileAsync("https://github.com/liuguangw/php_env/raw/master/php_env/resource.xml", resourceXmlTmpPath, (long i1, long i2) => { });
+            if (!result.success)
+            {
+                //下载配置文件出错
+                btn.IsEnabled = true;
+                this.updateProgressBar.Visibility = Visibility.Hidden;
+                mainWin.showErrorMessage(result.message);
+                return;
+            }
+            //获取两者的md5
+            string localMd5 = "";
+            string tmpMd5 = "";
+            result = await this.getFileMd5Async(resourceXmlPath);
+            if (!result.success)
+            {
+                btn.IsEnabled = true;
+                this.updateProgressBar.Visibility = Visibility.Hidden;
+                mainWin.showErrorMessage(result.message, "计算本地资源md5值出错");
+                return;
+            }
+            else {
+                localMd5 = result.message;
+            }
+            result = await this.getFileMd5Async(resourceXmlTmpPath);
+            if (!result.success)
+            {
+                btn.IsEnabled = true;
+                this.updateProgressBar.Visibility = Visibility.Hidden;
+                mainWin.showErrorMessage(result.message, "计算临时资源md5值出错");
+                return;
+            }
+            else {
+                tmpMd5 = result.message;
+            }
+            //判断是否要覆盖
+            FileInfo tmpFileInfo = new FileInfo(resourceXmlTmpPath);
+            if (localMd5 != tmpMd5)
+            {
+                //copy
+                try
+                {
+                    tmpFileInfo.CopyTo(resourceXmlPath, true);
+                }
+                catch (Exception e1)
+                {
+                    btn.IsEnabled = true;
+                    this.updateProgressBar.Visibility = Visibility.Hidden;
+                    mainWin.showErrorMessage(e1.Message, "覆盖本地资源文件出错");
+                    return;
+                }
+            }
+            //删除临时文件
+            try
+            {
+                tmpFileInfo.Delete();
+            }
+            catch (Exception e1)
+            {
+                btn.IsEnabled = true;
+                this.updateProgressBar.Visibility = Visibility.Hidden;
+                mainWin.showErrorMessage(e1.Message, "删除临时资源文件出错");
+                return;
+            }
+            //
+            btn.IsEnabled = true;
+            this.updateProgressBar.Visibility = Visibility.Hidden;
+            if (localMd5 != tmpMd5)
+            {
+                if (MessageBox.Show("更新资源文件成功,重启本程序生效,确定要重启程序吗", "", MessageBoxButton.YesNoCancel, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    //重启应用
+                    mainWin.closeAllApp();
+                    mainWin.isWinAppRestart = true;
+                    Process.Start(Process.GetCurrentProcess().MainModule.FileName);
+                    Application.Current.Shutdown();
+                }
+            }
+            else
+            {
+                MessageBox.Show("资源文件已经是最新版", "", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
     }
 }

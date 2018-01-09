@@ -1,8 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
-using System.Windows.Data;
 
 namespace php_env
 {
@@ -21,22 +19,29 @@ namespace php_env
         public string message { get; }
 
         /// <summary>
+        /// 任务执行结果
+        /// </summary>
+        /// <param name="success"></param>
+        /// <param name="message"></param>
+        public TaskResult(bool success,string message)
+        {
+            this.success = success;
+            this.message = message;
+        }
+
+        /// <summary>
         /// 任务执行成功
         /// </summary>
-        public TaskResult()
+        public TaskResult():this(true,"")
         {
-            this.success = true;
-            this.message = "";
         }
 
         /// <summary>
         /// 任务执行失败
         /// </summary>
         /// <param name="message">错误消息</param>
-        public TaskResult(string message)
+        public TaskResult(string message) : this(false, message)
         {
-            this.success = false;
-            this.message = message;
         }
 
         /// <summary>

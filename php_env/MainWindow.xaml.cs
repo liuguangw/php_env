@@ -31,6 +31,10 @@ namespace php_env
         /// php默认的上传文件大小限制
         /// </summary>
         public string phpUploadMaxFilesize = "8M";
+        /// <summary>
+        /// 标记为重启时退出操作
+        /// </summary>
+        public bool isWinAppRestart = false;
 
         public MainWindow()
         {
@@ -125,28 +129,40 @@ namespace php_env
             settingDialog.ShowDialog();
         }
 
+        public async void closeAllApp() {
+
+            AppStatus phpStatus = this.Resources["phpStatus"] as AppStatus;
+            AppStatus nginxStatus = this.Resources["nginxStatus"] as AppStatus;
+
+            if (phpStatus.isRunning)
+            {
+                await this.stopApp(phpStatus.appItem);
+            }
+            if (nginxStatus.isRunning)
+            {
+                await this.stopApp(nginxStatus.appItem);
+            }
+
+        }
+
         /// <summary>
         ///  关闭事件
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            //重启操作时不提示
+            if (this.isWinAppRestart) {
+                return;
+            }
             AppStatus phpStatus = this.Resources["phpStatus"] as AppStatus;
             AppStatus nginxStatus = this.Resources["nginxStatus"] as AppStatus;
             if (phpStatus.isRunning || nginxStatus.isRunning)
             {
                 if (MessageBoxResult.Yes == MessageBox.Show("服务器正在运行,退出时服务器也会停止,你确定要退出吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning))
                 {
-                    if (phpStatus.isRunning)
-                    {
-                        await this.stopApp(phpStatus.appItem);
-                    }
-                    if (nginxStatus.isRunning)
-                    {
-                        await this.stopApp(nginxStatus.appItem);
-                    }
-                    e.Cancel = false;
+                    this.closeAllApp();
                 }
                 else
                 {
@@ -154,11 +170,7 @@ namespace php_env
                 }
                 return;
             }
-            if (MessageBoxResult.Yes == MessageBox.Show("你确定要退出程序吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
-            {
-                e.Cancel = false;
-            }
-            else
+            if (MessageBoxResult.Yes != MessageBox.Show("你确定要退出程序吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
             {
                 e.Cancel = true;
             }
@@ -169,18 +181,25 @@ namespace php_env
             MessageBox.Show(err, title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
+        public string getResourceXmlPath(bool isTmpPath=false) {
+            if (isTmpPath)
+            {
+                return basePath + "resource.xml.tmp";
+            }
+            return basePath + "resource.xml";
+        }
+
         private void loadXmlData()
         {
             XmlDocument doc = new XmlDocument();
             try
             {
-                doc.Load(basePath + "resource.xml");
+                doc.Load(this.getResourceXmlPath());
                 //
                 XmlNodeList phpListXml = doc.DocumentElement["php"].GetElementsByTagName("item");
                 XmlNodeList nginxListXml = doc.DocumentElement["nginx"].GetElementsByTagName("item");
                 XmlNodeList vcListXml = doc.DocumentElement["vc"].GetElementsByTagName("item");
                 //
-                int i;
                 foreach (XmlElement tmp in phpListXml)
                 {
                     DirectoryInfo d = new DirectoryInfo(this.getAppPath(AppType.php, tmp.GetAttribute("version")));

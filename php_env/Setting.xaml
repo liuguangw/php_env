@@ -116,7 +116,17 @@
         </TabItem>
         <TabItem Header="关于">
             <StackPanel>
-                <TextBlock>Enter some text</TextBlock>
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="25" Padding="5">
+			流光的php集成环境包
+                </TextBlock>
+                <TextBlock Margin="10" TextWrapping="Wrap" FontSize="16">
+            项目主页：<Hyperlink NavigateUri="https://github.com/liuguangw/php_env" RequestNavigate="Hyperlink_RequestNavigate">https://github.com/liuguangw/php_env</Hyperlink>
+                </TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="10">
+                    <TextBlock VerticalAlignment="Center" FontSize="16">资源更新：</TextBlock>
+                    <Button VerticalAlignment="Center" FontSize="16" Click="updateResource">更新</Button>
+                    <ProgressBar Name="updateProgressBar" IsIndeterminate="True" Width="160" Margin="5,0,0,0" Visibility="Hidden"/>
+                </StackPanel>
             </StackPanel>
         </TabItem>
     </TabControl>
