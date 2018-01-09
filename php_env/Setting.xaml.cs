@@ -25,6 +25,7 @@ namespace php_env
             this.phpList.DataContext = mainWin.phpList;
             this.nginxList.DataContext = mainWin.nginxList;
             this.vcList.DataContext = mainWin.vcList;
+            this.StateChanged += new EventHandler(StateChangedHandler);
         }
 
         private void showCommonStatus(Label textLabel, MetroProgressBar progressBar)
@@ -505,7 +506,31 @@ namespace php_env
                 e.Cancel = true;
                 MessageBox.Show("还有" + this.taskCount + "个任务正在进行中", "任务进行中", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
+            else
+            {
+                //还原主窗体
+                MainWindow mainWin = this.Owner as MainWindow;
+                if (mainWin.WindowState != WindowState.Normal)
+                {
+                    mainWin.WindowState = WindowState.Normal;
+                }
+            }
         }
+
+        /// <summary>
+        /// 处理最小化、还原
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void StateChangedHandler(object sender, EventArgs e)
+        {
+            MainWindow mainWin = this.Owner as MainWindow;
+            if (mainWin.WindowState != this.WindowState)
+            {
+                mainWin.WindowState = this.WindowState;
+            }
+        }
+
         /// <summary>
         /// 超链接处理
         /// </summary>
@@ -555,7 +580,8 @@ namespace php_env
                 mainWin.showErrorMessage(result.message, "计算本地资源md5值出错");
                 return;
             }
-            else {
+            else
+            {
                 localMd5 = result.message;
             }
             result = await this.getFileMd5Async(resourceXmlTmpPath);
@@ -566,7 +592,8 @@ namespace php_env
                 mainWin.showErrorMessage(result.message, "计算临时资源md5值出错");
                 return;
             }
-            else {
+            else
+            {
                 tmpMd5 = result.message;
             }
             //判断是否要覆盖
