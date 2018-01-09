@@ -23,7 +23,7 @@ namespace php_env
         /// </summary>
         /// <param name="success"></param>
         /// <param name="message"></param>
-        public TaskResult(bool success,string message)
+        public TaskResult(bool success, string message)
         {
             this.success = success;
             this.message = message;
@@ -32,7 +32,7 @@ namespace php_env
         /// <summary>
         /// 任务执行成功
         /// </summary>
-        public TaskResult():this(true,"")
+        public TaskResult() : this(true, "")
         {
         }
 
@@ -66,7 +66,23 @@ namespace php_env
         public string vcVersion { get; }
         public string downloadUrl { get; }
         public AppType type { get; }
-        public bool isRunning { get; set; }
+        private bool _isRunning;
+        public bool isRunning
+        {
+            get
+            {
+                return this._isRunning;
+            }
+            set
+            {
+                if (this._isRunning!= value)
+                {
+                    this._isRunning = value;
+                    this.Changed("isRunning");
+                    this.Changed("statusText");
+                }
+            }
+        }
         private bool _installed;
         public bool installed
         {
@@ -105,7 +121,7 @@ namespace php_env
         {
             get
             {
-                return this.installed ? ("已安装"+(this.isRunning?"[运行中]":"")) : "未安装";
+                return this.installed ? ("已安装" + (this.isRunning ? "[运行中]" : "")) : "未安装";
             }
         }
 
@@ -172,8 +188,10 @@ namespace php_env
         /// <summary>
         /// 应用对应的命令文本
         /// </summary>
-        public string commandName {
-            get {
+        public string commandName
+        {
+            get
+            {
                 return this._isRunning ? "停止" : "启动";
             }
         }
@@ -181,7 +199,8 @@ namespace php_env
         /// <summary>
         /// 绑定是否可以切换App版本
         /// </summary>
-        public bool canSelect {
+        public bool canSelect
+        {
             get { return !this.isRunning; }
         }
 
@@ -194,11 +213,15 @@ namespace php_env
         /// <summary>
         /// 正在运行的进程
         /// </summary>
-        public Process process {
+        public Process process
+        {
             get { return this._process; }
-            set {
-                if (this._process != value) {
-                    if (this._process != null) {
+            set
+            {
+                if (this._process != value)
+                {
+                    if (this._process != null)
+                    {
                         this.process.Exited -= this.handler;
                     }
                     value.EnableRaisingEvents = true;
@@ -218,7 +241,7 @@ namespace php_env
         public AppStatus(bool isRunning = false)
         {
             this.isRunning = isRunning;
-            this.handler= new EventHandler(myProcess_Exited);
+            this.handler = new EventHandler(myProcess_Exited);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

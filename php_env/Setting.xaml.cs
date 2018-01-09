@@ -25,7 +25,6 @@ namespace php_env
             this.phpList.DataContext = mainWin.phpList;
             this.nginxList.DataContext = mainWin.nginxList;
             this.vcList.DataContext = mainWin.vcList;
-            this.StateChanged += new EventHandler(StateChangedHandler);
         }
 
         private void showCommonStatus(Label textLabel, MetroProgressBar progressBar)
@@ -499,35 +498,35 @@ namespace php_env
             System.Diagnostics.Process.Start(@"explorer.exe", mainWin.getAppPath(appItem));
         }
 
-        private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        /// <summary>
+        /// 执行退出,并判断退出是否成功
+        /// </summary>
+        /// <returns></returns>
+        public bool winExitSuccess()
         {
+
             if (this.taskCount > 0)
             {
-                e.Cancel = true;
+                MessageBox.Show("还有" + this.taskCount + "个任务正在进行中", "任务进行中", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            else
+            {
+                this.Hide();
+                return true;
+            }
+        }
+
+        private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            e.Cancel = true;
+            if (this.taskCount > 0)
+            {
                 MessageBox.Show("还有" + this.taskCount + "个任务正在进行中", "任务进行中", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             else
             {
-                //还原主窗体
-                MainWindow mainWin = this.Owner as MainWindow;
-                if (mainWin.WindowState != WindowState.Normal)
-                {
-                    mainWin.WindowState = WindowState.Normal;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 处理最小化、还原
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void StateChangedHandler(object sender, EventArgs e)
-        {
-            MainWindow mainWin = this.Owner as MainWindow;
-            if (mainWin.WindowState != this.WindowState)
-            {
-                mainWin.WindowState = this.WindowState;
+                this.Hide();
             }
         }
 

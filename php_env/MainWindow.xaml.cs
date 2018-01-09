@@ -22,6 +22,7 @@ namespace php_env
         public ObservableCollection<AppItem> phpList;
         public ObservableCollection<AppItem> nginxList;
         public ObservableCollection<AppItem> vcList;
+        public Setting settingWin = null;
 
         /// <summary>
         /// 默认开启的PHP扩展
@@ -124,12 +125,33 @@ namespace php_env
         /// <param name="e"></param>
         private void showSetting(object sender, RoutedEventArgs e)
         {
-            Setting settingDialog = new Setting(this);
-            settingDialog.Owner = this;
-            settingDialog.ShowDialog();
+            if (this.settingWin == null)
+            {
+                this.settingWin = new Setting(this);
+                this.settingWin.Owner = this;
+            }
+            if (this.settingWin.Visibility != Visibility.Visible)
+            {
+                this.settingWin.Show();//显示
+                if (this.settingWin.WindowState != WindowState.Normal)
+                {
+                    this.settingWin.WindowState = WindowState.Normal;
+                }
+            }
+            //已经是显示状态则执行最小化/还原切换
+            else if (this.settingWin.WindowState == WindowState.Normal)
+            {
+                this.settingWin.WindowState = WindowState.Minimized;
+            }
+            else if (this.settingWin.WindowState == WindowState.Minimized)
+            {
+                this.settingWin.WindowState = WindowState.Normal;
+            }
+
         }
 
-        public async void closeAllApp() {
+        public async void closeAllApp()
+        {
 
             AppStatus phpStatus = this.Resources["phpStatus"] as AppStatus;
             AppStatus nginxStatus = this.Resources["nginxStatus"] as AppStatus;
@@ -153,7 +175,8 @@ namespace php_env
         private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             //重启操作时不提示
-            if (this.isWinAppRestart) {
+            if (this.isWinAppRestart)
+            {
                 return;
             }
             AppStatus phpStatus = this.Resources["phpStatus"] as AppStatus;
@@ -162,6 +185,9 @@ namespace php_env
             {
                 if (MessageBoxResult.Yes == MessageBox.Show("服务器正在运行,退出时服务器也会停止,你确定要退出吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning))
                 {
+                    //关闭设置窗口
+                    this.settingWin.Close();
+                    //关闭服务器
                     this.closeAllApp();
                 }
                 else
@@ -181,7 +207,8 @@ namespace php_env
             MessageBox.Show(err, title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        public string getResourceXmlPath(bool isTmpPath=false) {
+        public string getResourceXmlPath(bool isTmpPath = false)
+        {
             if (isTmpPath)
             {
                 return basePath + "resource.xml.tmp";
