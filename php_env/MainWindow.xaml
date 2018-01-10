@@ -41,11 +41,11 @@
         <Label Grid.Row="2" Grid.Column="1" VerticalAlignment="Center">nginx</Label>
         <ComboBox Grid.Row="1" Grid.Column="2" Name="phpSelector" VerticalAlignment="Center" 
                   ItemsSource="{StaticResource phpList}" DisplayMemberPath="selectionName" 
-                  SelectionChanged="selector_SelectionChanged" IsEnabled="{Binding Source={StaticResource phpStatus},Path=canSelect}">
+                  IsEnabled="{Binding Source={StaticResource phpStatus},Path=canSelect}">
         </ComboBox>
         <ComboBox Grid.Row="2" Grid.Column="2" Name="nginxSelector" VerticalAlignment="Center" 
                   ItemsSource="{StaticResource nginxList}" DisplayMemberPath="selectionName" 
-                  SelectionChanged="selector_SelectionChanged" IsEnabled="{Binding Source={StaticResource nginxStatus},Path=canSelect}">
+                  IsEnabled="{Binding Source={StaticResource nginxStatus},Path=canSelect}">
         </ComboBox>
         <Button Name="phpBtn" Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" Margin="5,3" Click="appBtn_Click" Content="{Binding Source={StaticResource phpStatus},Path=commandName}"/>
         <Button Name="nginxBtn" Grid.Row="2" Grid.Column="3" VerticalAlignment="Center" Margin="5,3" Click="appBtn_Click" Content="{Binding Source={StaticResource nginxStatus},Path=commandName}"/>
