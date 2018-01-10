@@ -312,7 +312,7 @@ namespace php_env
                     {
                         appStatus = this.Resources["phpStatus"] as AppStatus;
                         appStatus.appItem = appItem;
-                        appStatus.process = myProcess;
+                        appStatus.process = myProcess;//附加进程对象,用于停止服务时调用
                         myProcess.StartInfo.FileName = @"php-cgi.exe";
                         myProcess.StartInfo.Arguments = "-b 127.0.0.1:6757";
                         myProcess.Start();
@@ -324,7 +324,6 @@ namespace php_env
                         myProcess.StartInfo.FileName = @"nginx.exe";
                         myProcess.Start();
                     }
-                    appStatus.isRunning = true;
                     appItem.isRunning = true;
                 }
                 catch (Exception e)
@@ -347,6 +346,8 @@ namespace php_env
                     {
                         appStatus = this.Resources["phpStatus"] as AppStatus;
                         appStatus.process.Kill();
+                        //进程结束时,appStatus会自动更新运行状态属性
+                        //appItem.isRunning = false;
                     }
                     else
                     {
@@ -358,7 +359,6 @@ namespace php_env
                         myProcess.StartInfo.FileName = @"nginx.exe";
                         myProcess.StartInfo.Arguments = "-s stop";
                         myProcess.Start();
-                        appStatus.isRunning = false;
                         appItem.isRunning = false;
                     }
                 }

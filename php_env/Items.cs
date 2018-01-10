@@ -173,7 +173,8 @@ namespace php_env
             {
                 return this._isRunning;
             }
-            set
+            //只允许内部修改状态
+            private set
             {
                 if (this._isRunning != value)
                 {
@@ -201,13 +202,51 @@ namespace php_env
         /// </summary>
         public bool canSelect
         {
-            get { return !this.isRunning; }
+            get { return !this._isRunning; }
         }
 
+        private AppItem _appItem;
         /// <summary>
         /// 正在运行的对象
         /// </summary>
-        public AppItem appItem;
+        public AppItem appItem
+        {
+            get
+            {
+                return this._appItem;
+            }
+            set
+            {
+                if (this._appItem != value)
+                {
+                    //移除原数据绑定
+                    if (this._appItem != null) {
+                        this._appItem.PropertyChanged -= this.AppItem_PropertyChanged;
+                    }
+                    //添加新数据绑定
+                    if (value != null)
+                    {
+                        this._appItem = value;
+                        value.PropertyChanged += this.AppItem_PropertyChanged;
+                        this.isRunning = value.isRunning;
+                    }
+                    else {
+                        this.isRunning = false;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 运行状态依赖于appItem
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void AppItem_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            this.isRunning = this._appItem.isRunning;
+        }
+
         private Process _process;
 
         /// <summary>
@@ -234,7 +273,6 @@ namespace php_env
 
         private void myProcess_Exited(object sender, EventArgs e)
         {
-            this.isRunning = false;
             this.appItem.isRunning = false;
         }
 
