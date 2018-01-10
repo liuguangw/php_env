@@ -16,8 +16,6 @@ namespace php_env
     /// </summary>
     public partial class Setting : MetroWindow
     {
-        public int taskCount = 0;
-
         public Setting(MainWindow mainWin)
         {
             this.Owner = mainWin;
@@ -35,7 +33,6 @@ namespace php_env
         {
             MainWindow mainWin = this.Owner as MainWindow;
             AppItem appItem = senderBtn.DataContext as AppItem;
-            this.taskCount--;
             appItem.resetProgress();
             mainWin.showErrorMessage(message);
         }
@@ -169,7 +166,6 @@ namespace php_env
         /// <param name="e"></param>
         private async void mainAction(object sender, RoutedEventArgs e)
         {
-            this.taskCount++;
             Button senderBtn = sender as Button;
             AppItem appItem = senderBtn.DataContext as AppItem;
             string appName = Enum.GetName(typeof(AppType), appItem.type) + appItem.version;
@@ -214,7 +210,6 @@ namespace php_env
                     appItem.installed = true;
                 }
             }
-            this.taskCount--;
         }
 
         /// <summary>
@@ -446,14 +441,8 @@ namespace php_env
         private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             e.Cancel = true;
-            if (this.taskCount > 0)
-            {
-                MessageBox.Show("还有" + this.taskCount + "个任务正在进行中", "任务进行中", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-            else
-            {
-                this.Hide();
-            }
+            this.WindowState = WindowState.Minimized;
+            this.Hide();
         }
 
         /// <summary>
@@ -464,7 +453,7 @@ namespace php_env
         private void vcHyperlinkColumn_Click(object sender, RoutedEventArgs e)
         {
             AppItem appItem = ((TextBlock)sender).DataContext as AppItem;
-            System.Diagnostics.Process.Start(appItem.downloadUrl);
+            Process.Start(appItem.downloadUrl);
         }
 
         /// <summary>
@@ -474,7 +463,7 @@ namespace php_env
         /// <param name="e"></param>
         private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
         {
-            System.Diagnostics.Process.Start(e.Uri.AbsoluteUri);
+            Process.Start(e.Uri.AbsoluteUri);
         }
 
         private async void updateResource(object sender, RoutedEventArgs e)

@@ -5,7 +5,7 @@
         xmlns:local="clr-namespace:php_env"
         WindowStartupLocation="CenterOwner"
         Closing="MetroWindow_Closing"
-        ResizeMode="CanMinimize"
+        ResizeMode="NoResize"
         ShowInTaskbar="False"
         Title="设置" 
         Height="385"

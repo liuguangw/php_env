@@ -230,14 +230,11 @@ namespace php_env
                     this.settingWin.WindowState = WindowState.Normal;
                 }
             }
-            //已经是显示状态则执行最小化/还原切换
+            //已经是显示状态则执行最小化再隐藏
             else if (this.settingWin.WindowState == WindowState.Normal)
             {
                 this.settingWin.WindowState = WindowState.Minimized;
-            }
-            else if (this.settingWin.WindowState == WindowState.Minimized)
-            {
-                this.settingWin.WindowState = WindowState.Normal;
+                this.settingWin.Hide();
             }
 
         }
@@ -288,12 +285,7 @@ namespace php_env
                 }
                 return;
             }
-            string tip = "你确定要退出程序吗?";
-            if (this.settingWin.taskCount > 0)
-            {
-                tip += "(退出时,后台任务也会停止!)";
-            }
-            if (MessageBoxResult.Yes != MessageBox.Show(tip, "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
+            if (MessageBoxResult.Yes != MessageBox.Show("你确定要退出程序吗?(退出时,后台任务也会停止!)", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
             {
                 e.Cancel = true;
             }
