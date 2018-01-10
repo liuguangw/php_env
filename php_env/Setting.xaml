@@ -21,9 +21,9 @@
             </Style>
         </TabControl.Resources>
         <TabItem Header="php版本管理">
-            <DockPanel>
-                <DataGrid Name="phpList" DockPanel.Dock="Top" ItemsSource="{Binding}" Margin="10,10,10,0" AutoGenerateColumns="False"
-                   ColumnWidth="*" Style="{StaticResource AzureDataGrid}" Height="262">
+            <StackPanel>
+                <DataGrid Name="phpList" ItemsSource="{Binding}" Margin="10,10,10,0" AutoGenerateColumns="False"
+                   ColumnWidth="*" Style="{StaticResource AzureDataGrid}" Height="292">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="php版本"  Binding="{Binding version}"/>
                         <DataGridTextColumn Header="vc版本" Binding="{Binding vcVersion}" />
@@ -32,7 +32,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <Button Content="{Binding commandText}" Click="mainAction" Padding="12,8"/>
+                                        <Button Content="{Binding commandText}" IsEnabled="{Binding canModify}" Click="mainAction" Padding="12,8"/>
                                         <Button Margin="10,0,0,0" IsEnabled="{Binding installed}" Click="viewAction">浏览目录</Button>
                                     </StackPanel>
                                 </DataTemplate>
@@ -40,29 +40,12 @@
                         </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
-                <Grid Background="#FFEAE7E7" DockPanel.Dock="Bottom">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="4*"/>
-                        <ColumnDefinition Width="7*"/>
-                        <ColumnDefinition Width="5*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.Resources>
-                        <Style TargetType="Label">
-                            <Setter Property="Margin" Value="8,4"/>
-                        </Style>
-                    </Grid.Resources>
-                    <Label Name="phpStatusText">无任务</Label>
-                    <Controls:MetroProgressBar Grid.Column="1" Name="phpStatus" IsIndeterminate="True" Visibility="Hidden"/>
-                </Grid>
-            </DockPanel>
+            </StackPanel>
         </TabItem>
         <TabItem Header="nginx版本管理">
-            <DockPanel>
-                <DataGrid Name="nginxList" DockPanel.Dock="Top" ItemsSource="{Binding}" Margin="10,10,10,0" AutoGenerateColumns="False"
-                   ColumnWidth="*" Style="{StaticResource AzureDataGrid}" Height="262">
+            <StackPanel>
+                <DataGrid Name="nginxList" ItemsSource="{Binding}" Margin="10,10,10,0" AutoGenerateColumns="False"
+                   ColumnWidth="*" Style="{StaticResource AzureDataGrid}" Height="292">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="nginx版本"  Binding="{Binding version}"/>
                         <DataGridTextColumn Header="状态" Binding="{Binding statusText}"/>
@@ -70,7 +53,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <Button Content="{Binding commandText}" Click="mainAction" Padding="12,8"/>
+                                        <Button Content="{Binding commandText}" IsEnabled="{Binding canModify}" Click="mainAction" Padding="12,8"/>
                                         <Button Margin="10,0,0,0" IsEnabled="{Binding installed}" Click="viewAction">浏览目录</Button>
                                     </StackPanel>
                                 </DataTemplate>
@@ -78,24 +61,7 @@
                         </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
-                <Grid Background="#FFEAE7E7" DockPanel.Dock="Bottom">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="4*"/>
-                        <ColumnDefinition Width="7*"/>
-                        <ColumnDefinition Width="5*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.Resources>
-                        <Style TargetType="Label">
-                            <Setter Property="Margin" Value="8,4"/>
-                        </Style>
-                    </Grid.Resources>
-                    <Label Name="nginxStatusText">无任务</Label>
-                    <Controls:MetroProgressBar Grid.Column="1" Name="nginxStatus" IsIndeterminate="True" Visibility="Hidden"/>
-                </Grid>
-            </DockPanel>
+            </StackPanel>
         </TabItem>
         <TabItem Header="VC环境安装">
             <StackPanel>

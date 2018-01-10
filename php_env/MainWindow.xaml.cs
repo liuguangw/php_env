@@ -196,7 +196,12 @@ namespace php_env
                 }
                 return;
             }
-            if (MessageBoxResult.Yes != MessageBox.Show("你确定要退出程序吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
+            string tip = "你确定要退出程序吗?";
+            if (this.settingWin.taskCount > 0)
+            {
+                tip += "(退出时,后台任务也会停止!)";
+            }
+            if (MessageBoxResult.Yes != MessageBox.Show(tip, "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
             {
                 e.Cancel = true;
             }

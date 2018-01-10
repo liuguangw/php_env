@@ -75,7 +75,7 @@ namespace php_env
             }
             set
             {
-                if (this._isRunning!= value)
+                if (this._isRunning != value)
                 {
                     this._isRunning = value;
                     this.Changed("isRunning");
@@ -104,6 +104,102 @@ namespace php_env
         }
 
         /// <summary>
+        /// 重置进度
+        /// </summary>
+        public void resetProgress()
+        {
+            this.updateProgress(0, 0);
+        }
+
+        /// <summary>
+        /// 显示不可预知的进度
+        /// </summary>
+        public void setPendingProgress()
+        {
+            this.updateProgress(0, -1);
+        }
+
+        /// <summary>
+        /// 更新进度
+        /// </summary>
+        /// <param name="progressValue">进度值</param>
+        /// <param name="progressMaximum">进度最大值</param>
+        public void updateProgress(double progressValue, double progressMaximum)
+        {
+            this.progressValue = progressValue;
+            this.progressMaximum = progressMaximum;
+
+        }
+
+        public bool _canModify = true;
+
+        /// <summary>
+        /// 标识能否执行修改操作:安装或者卸载
+        /// </summary>
+        public bool canModify
+        {
+            get
+            {
+                return this._canModify;
+            }
+            private set
+            {
+                if (this._canModify != value)
+                {
+                    this._canModify = value;
+                    this.Changed("canModify");
+                }
+            }
+        }
+
+        private double _progressMaximum = 0;
+
+        /// <summary>
+        /// 进度最大值 0表示已停止 -1表示进度无法显示 其他值为有效值
+        /// </summary>
+        public double progressMaximum
+        {
+            get
+            {
+                return this._progressMaximum;
+            }
+            set
+            {
+                if (this._progressMaximum != value)
+                {
+                    this._progressMaximum = value;
+                    this.canModify = (value == 0);
+                    this.Changed("progressMaximum");
+                    this.Changed("statusText");
+                }
+            }
+        }
+
+
+
+        private double _progressValue = 0;
+
+        /// <summary>
+        /// 进度值
+        /// </summary>
+        public double progressValue
+        {
+            get
+            {
+                return this._progressValue;
+            }
+            set
+            {
+                if (this._progressValue != value)
+                {
+                    this._progressValue = value;
+                    this.Changed("progressValue");
+                    this.Changed("statusText");
+                }
+            }
+        }
+
+        /// <summary>
         /// 下拉框文本
         /// </summary>
         public string selectionName
@@ -121,6 +217,14 @@ namespace php_env
         {
             get
             {
+                if (this._progressMaximum == -1)
+                {
+                    return this.installed ? "卸载中" : "安装中";
+                }
+                else if (this._progressMaximum > 0)
+                {
+                    return "下载中[" + Math.Floor(this._progressValue * 100 / this._progressMaximum).ToString() + "%]";
+                }
                 return this.installed ? ("已安装" + (this.isRunning ? "[运行中]" : "")) : "未安装";
             }
         }
@@ -220,7 +324,8 @@ namespace php_env
                 if (this._appItem != value)
                 {
                     //移除原数据绑定
-                    if (this._appItem != null) {
+                    if (this._appItem != null)
+                    {
                         this._appItem.PropertyChanged -= this.AppItem_PropertyChanged;
                     }
                     //添加新数据绑定
@@ -230,7 +335,8 @@ namespace php_env
                         value.PropertyChanged += this.AppItem_PropertyChanged;
                         this.isRunning = value.isRunning;
                     }
-                    else {
+                    else
+                    {
                         this.isRunning = false;
                     }
                 }
