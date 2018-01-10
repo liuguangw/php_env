@@ -2,8 +2,10 @@
 #define APP_DEBUG 
 using MahApps.Metro.Controls;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -39,13 +41,103 @@ namespace php_env
 
         public MainWindow()
         {
-            this.Resources["phpList"] = this.phpList = new ObservableCollection<AppItem>();
-            this.Resources["nginxList"] = this.nginxList = new ObservableCollection<AppItem>();
+            this.phpList = new ObservableCollection<AppItem>();
+            this.nginxList = new ObservableCollection<AppItem>();
             this.vcList = new ObservableCollection<AppItem>();
+            ObservableCollection<AppItem> list0 = new ObservableCollection<AppItem>();
+            ObservableCollection<AppItem> list1 = new ObservableCollection<AppItem>();
+            this.Resources["phpList"] = list0;
+            this.Resources["nginxList"] = list1;
             this.phpExtensions = new List<string>();
             this.Resources["phpStatus"] = new AppStatus();
             this.Resources["nginxStatus"] = new AppStatus();
             InitializeComponent();
+            //处理安装/卸载导致的下拉框元素数量的变化
+            this.phpList.CollectionChanged += list_CollectionChanged;
+            this.nginxList.CollectionChanged += list_CollectionChanged;
+            //下拉框变化时默认选中第一项
+            list0.CollectionChanged += selection_CollectionChanged;
+            list1.CollectionChanged += selection_CollectionChanged;
+        }
+
+        private void selection_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            ObservableCollection<AppItem> list = sender as ObservableCollection<AppItem>;
+            if (list.Count > 0) {
+                AppItem firstItem = list[0];
+                ComboBox comboBox;
+                if (firstItem.type == AppType.php)
+                {
+                    comboBox = this.phpSelector;
+                }
+                else {
+                    comboBox = this.nginxSelector;
+                }
+                if (comboBox.SelectedIndex == -1) {
+                    comboBox.SelectedIndex = 0;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 首次加载时,自动添加元素,并绑定属性修改事件
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void list_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            IList newItems = e.NewItems;
+            if (newItems.Count > 0)
+            {
+                AppItem appItem = newItems[0] as AppItem;
+                ObservableCollection<AppItem> rList;
+                if (appItem.type == AppType.php)
+                {
+                    rList = this.Resources["phpList"] as ObservableCollection<AppItem>;
+                }
+                else
+                {
+                    rList = this.Resources["nginxList"] as ObservableCollection<AppItem>;
+                }
+                foreach (AppItem tmpItem in newItems)
+                {
+                    tmpItem.PropertyChanged += tmpItem_PropertyChanged;
+                    if (tmpItem.installed)
+                    {
+                        rList.Add(tmpItem);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 当有应用被安装时,下拉框资源添加元素，反之则移除元素
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void tmpItem_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            AppItem tmpItem = sender as AppItem;
+            if (e.PropertyName == "installed")
+            {
+                ObservableCollection<AppItem> rList;
+                if (tmpItem.type == AppType.php)
+                {
+                    rList = this.Resources["phpList"] as ObservableCollection<AppItem>;
+                }
+                else
+                {
+                    rList = this.Resources["nginxList"] as ObservableCollection<AppItem>;
+                }
+                if (tmpItem.installed)
+                {
+                    rList.Add(tmpItem);
+                }
+                else
+                {
+                    rList.Remove(tmpItem);
+                }
+            }
         }
 
         public string getAppPath(AppType appType, string appVersion)
@@ -276,30 +368,6 @@ namespace php_env
             basePath = di.Parent.Parent.FullName + @"\";
 #endif
             this.loadXmlData();
-        }
-
-        private void selector_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            ComboBox combo = sender as ComboBox;
-            AppItem orgItem = null;
-            AppItem destItem = null;
-            if (e.AddedItems.Count > 0)
-            {
-                destItem = e.AddedItems[0] as AppItem;
-            }
-            else
-            {
-                return;
-            }
-            if (e.RemovedItems.Count > 0)
-            {
-                orgItem = e.RemovedItems[0] as AppItem;
-            }
-            if (!destItem.installed)
-            {
-                combo.SelectedItem = orgItem;//还原选择
-                this.showErrorMessage(destItem.version + "版本尚未安装");
-            }
         }
 
         private Task<TaskResult> runApp(AppItem appItem)
