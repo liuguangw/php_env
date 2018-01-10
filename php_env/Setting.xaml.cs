@@ -34,7 +34,7 @@ namespace php_env
             MainWindow mainWin = this.Owner as MainWindow;
             AppItem appItem = senderBtn.DataContext as AppItem;
             appItem.resetProgress();
-            mainWin.showErrorMessage(message);
+            mainWin.showErrorMessage(message, title);
         }
 
         private void onItemTaskFailed(Button senderBtn, TaskResult result, string title = "出错了")
