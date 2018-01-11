@@ -69,22 +69,28 @@ namespace php_env
         private void selection_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             ObservableCollection<AppItem> list = sender as ObservableCollection<AppItem>;
-            if (list.Count > 0) {
+            //如果存在下拉选项,并且没有选择,则默认选择第一个
+            if (list.Count > 0)
+            {
                 AppItem firstItem = list[0];
                 ComboBox comboBox;
                 if (firstItem.type == AppType.php)
                 {
                     comboBox = this.phpSelector;
                 }
-                else {
+                else
+                {
                     comboBox = this.nginxSelector;
                 }
-                if (comboBox.SelectedIndex == -1) {
+                if (comboBox.SelectedIndex == -1)
+                {
                     comboBox.SelectedIndex = 0;
                 }
                 //设置面板composer处PHP列表
-                if (this.settingWin != null) {
-                    if (settingWin.phpSelector.SelectedIndex == -1) {
+                if (this.settingWin != null)
+                {
+                    if (settingWin.phpSelector.SelectedIndex == -1)
+                    {
                         settingWin.phpSelector.SelectedIndex = 0;
                     }
                 }
@@ -234,7 +240,8 @@ namespace php_env
                 this.settingWin = new Setting(this);
                 this.settingWin.Owner = this;
                 //设置面板composer处PHP列表
-                if (this.settingWin != null)
+                ObservableCollection<AppItem> rList = Application.Current.Resources["phpList"] as ObservableCollection<AppItem>;
+                if (rList.Count > 0)
                 {
                     if (settingWin.phpSelector.SelectedIndex == -1)
                     {
