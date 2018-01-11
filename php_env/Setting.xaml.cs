@@ -750,6 +750,7 @@ namespace php_env
             {
                 if (MessageBoxResult.Yes == MessageBox.Show("检测到以下目录已经安装了composer,继续安装composer可能无法生效,是否删除下方目录中安装的composer?\r\n" + String.Join(" , ", result.pathList.ToArray()), "操作提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
                 {
+                    //删除文件
                     List<string> toBeDeleteFiles = new List<string>();
                     foreach (string tmpPath in pathList)
                     {
@@ -763,6 +764,19 @@ namespace php_env
                         this.composerProgressBar.Visibility = Visibility.Hidden;
                         mainWin.showErrorMessage(delResult.message, boxTitle);
                         return;
+                    }
+                    //删除用户Path变量
+                    TaskResult delEnvResult;
+                    foreach (string tmpPath in pathList)
+                    {
+                        delEnvResult = await this.removeUserPath(tmpPath);
+                        if (!delEnvResult.success)
+                        {
+                            btn.IsEnabled = true;
+                            this.composerProgressBar.Visibility = Visibility.Hidden;
+                            mainWin.showErrorMessage(delEnvResult.message, boxTitle);
+                            return;
+                        }
                     }
                 }
             }
