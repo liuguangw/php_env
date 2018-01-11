@@ -93,6 +93,13 @@
                     <Button VerticalAlignment="Center" FontSize="16" Click="updateResource">更新</Button>
                     <ProgressBar Name="updateProgressBar" IsIndeterminate="True" Width="160" Margin="5,0,0,0" Visibility="Hidden"/>
                 </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="10">
+                    <TextBlock VerticalAlignment="Center" FontSize="16">composer：</TextBlock>
+                    <ComboBox Grid.Row="1" Grid.Column="2" Name="phpSelector" VerticalAlignment="Center" 
+                  ItemsSource="{StaticResource phpList}" DisplayMemberPath="selectionName" Margin="5,0,0,0" Width="100"></ComboBox>
+                    <Button VerticalAlignment="Center" FontSize="16" Margin="5,0,0,0" Click="installComposer">安装</Button>
+                    <ProgressBar Name="composerProgressBar" IsIndeterminate="True" Width="160" Margin="5,0,0,0" Visibility="Hidden"/>
+                </StackPanel>
             </StackPanel>
         </TabItem>
     </TabControl>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 
@@ -96,7 +97,6 @@ namespace php_env
                 {
                     this._installed = value;
                     this.Changed("installed");
-                    this.Changed("selectionName");
                     this.Changed("statusText");
                     this.Changed("commandText");
                 }
@@ -206,7 +206,7 @@ namespace php_env
         {
             get
             {
-                return this.version + (this.installed ? "" : "[未安装]");
+                return Enum.GetName(typeof(AppType), this.type) + this.version;
             }
         }
 
@@ -395,6 +395,49 @@ namespace php_env
             {
                 PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
             }
+        }
+    }
+    /// <summary>
+    /// 获取composer安装路径的任务结果
+    /// </summary>
+    public class ComposerPathTaskResult {
+
+        /// <summary>
+        /// 任务是否完成
+        /// </summary>
+        public bool success { get; }
+
+        /// <summary>
+        /// 任务失败原因
+        /// </summary>
+        public string message { get; }
+
+        /// <summary>
+        /// 文件夹路径列表
+        /// </summary>
+        public List<string> pathList;
+
+        /// <summary>
+        /// 任务执行结果
+        /// </summary>
+        /// <param name="success"></param>
+        /// <param name="message"></param>
+        public ComposerPathTaskResult(bool success, string message, List<string> pathList)
+        {
+            this.success = success;
+            this.message = message;
+            this.pathList = pathList;
+        }
+
+        public ComposerPathTaskResult(string message) : this(false, message, null) {
+        }
+
+        public ComposerPathTaskResult(Exception e) : this(e.Message)
+        {
+        }
+
+        public ComposerPathTaskResult(List<string> pathList) : this(true,"", pathList)
+        {
         }
     }
 }

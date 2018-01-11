@@ -1,5 +1,7 @@
 ﻿using MahApps.Metro.Controls;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -176,24 +178,51 @@ namespace php_env
             TaskResult result;
             if (appItem.installed)
             {
+                //进度等待
+                appItem.setPendingProgress();
                 /*卸载*/
                 if (appItem.isRunning)
                 {
                     this.onItemTaskFailed(senderBtn, appName + "正在运行中无法卸载");
                     return;
                 }
-                //进度等待
-                appItem.setPendingProgress();
+                string uninstallMessage = "你确定要卸载" + appName + "吗?";
+                if (appItem.type == AppType.php)
+                {
+                    //判断composer安装情况
+                    FileInfo composerInfo = new FileInfo(appPath + @"\composer.bat");
+                    if (composerInfo.Exists)
+                    {
+                        uninstallMessage += "(目录下的composer也会一起移除)";
+                    }
+                }
+                if (MessageBox.Show(uninstallMessage, "卸载提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                {
+                    appItem.resetProgress();
+                    return;
+                }
                 result = await this.deleteDir(appPathInfo);
-                appItem.resetProgress();
                 if (!result.success)
                 {
+                    //删除目录出错
                     this.onItemTaskFailed(senderBtn, result, "卸载" + appName + "出错");
+                    appItem.resetProgress();
+                    return;
                 }
-                else
+                if (appItem.type == AppType.php)
                 {
-                    appItem.installed = false;
+                    //删除Path变量
+                    result = await this.removeUserPath(appPath);
+                    if (!result.success)
+                    {
+                        //删除目录出错
+                        this.onItemTaskFailed(senderBtn, result, "卸载" + appName + "出错");
+                        appItem.resetProgress();
+                        return;
+                    }
                 }
+                appItem.installed = false;
+                appItem.resetProgress();
             }
             else
             {
@@ -210,6 +239,33 @@ namespace php_env
                     appItem.installed = true;
                 }
             }
+        }
+
+        /// <summary>
+        /// 从用户Path环境变量中删除指定目录
+        /// </summary>
+        /// <param name="appPath"></param>
+        /// <returns></returns>
+        private Task<TaskResult> removeUserPath(string appPath)
+        {
+            return Task<TaskResult>.Run(() =>
+            {
+                try
+                {
+                    List<string> pathList = this.parsePathString(EnvironmentVariableTarget.User);
+                    if (pathList.Contains(appPath))
+                    {
+                        pathList.Remove(appPath);
+                        //更新用户Path环境变量
+                        Environment.SetEnvironmentVariable("Path", String.Join(";", pathList) + ";", EnvironmentVariableTarget.User);
+                    }
+                }
+                catch (Exception e)
+                {
+                    return new TaskResult(e);
+                }
+                return new TaskResult();
+            });
         }
 
         /// <summary>
@@ -272,6 +328,36 @@ namespace php_env
                     if (path.Exists)
                     {
                         path.Delete(true);
+                    }
+                }
+                catch (Exception e1)
+                {
+                    return new TaskResult(e1);
+                }
+                return new TaskResult();
+            });
+        }
+
+        /// <summary>
+        /// 批量删除文件
+        /// </summary>
+        /// <param name="files"></param>
+        /// <returns></returns>
+        public Task<TaskResult> deleteFiles(List<string> files)
+        {
+            return Task<TaskResult>.Run(() =>
+            {
+
+                try
+                {
+                    FileInfo fileInfo;
+                    foreach (string filePath in files)
+                    {
+                        fileInfo = new FileInfo(filePath);
+                        if (fileInfo.Exists)
+                        {
+                            fileInfo.Delete();
+                        }
                     }
                 }
                 catch (Exception e1)
@@ -557,6 +643,192 @@ namespace php_env
             {
                 MessageBox.Show("资源文件已经是最新版", "", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        /// <summary>
+        /// 解析Path环境变量
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        private List<string> parsePathString(EnvironmentVariableTarget target) {
+            List<string> pathList = new List<string>();
+            string pathStr= Environment.GetEnvironmentVariable("Path", target);
+            if (pathStr == null) {
+                return pathList;
+            }
+            pathStr = pathStr.TrimEnd(';');
+            if (pathStr.Length == 0) {
+                return pathList;
+            }
+            string[] pathArray = pathStr.Split(';');
+            foreach (string path in pathArray)
+            {
+                if (path.EndsWith("\\"))
+                {
+                    pathList.Add(path.TrimEnd('\\'));
+                }
+                else
+                {
+                    pathList.Add(path);
+                }
+            }
+            return pathList;
+        }
+
+        private Task<ComposerPathTaskResult> getComposerPathAsync()
+        {
+            return Task.Run(() =>
+            {
+                List<string> resultList = new List<string>();
+                try
+                {
+                    List<string> pathList = this.parsePathString(EnvironmentVariableTarget.Machine);
+                    pathList.AddRange(this.parsePathString(EnvironmentVariableTarget.User));
+                    FileInfo fileInfo;
+                    foreach (string path in pathList)
+                    {
+                        fileInfo = new FileInfo(path + @"\composer.bat");
+                        if (fileInfo.Exists)
+                        {
+                            resultList.Add(path);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    return new ComposerPathTaskResult(e);
+                }
+                return new ComposerPathTaskResult(resultList);
+            });
+
+        }
+
+        /// <summary>
+        /// 安装
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void installComposer(object sender, RoutedEventArgs e)
+        {
+            AppItem appItem = this.phpSelector.SelectedItem as AppItem;
+            Button btn = sender as Button;
+            MainWindow mainWin = this.Owner as MainWindow;
+            string boxTitle = "安装composer";
+            if (appItem == null)
+            {
+                ObservableCollection<AppItem> installedPhpList = Application.Current.Resources["phpList"] as ObservableCollection<AppItem>;
+                if (installedPhpList.Count == 0)
+                {
+                    mainWin.showErrorMessage("请先安装PHP再安装", boxTitle);
+                    return;
+                }
+                else
+                {
+                    mainWin.showErrorMessage("请选择PHP版本", boxTitle);
+                    return;
+                }
+            }
+            //读取环境变量,获取系统已经安装了composer的路径
+            btn.IsEnabled = false;
+            this.composerProgressBar.Visibility = Visibility.Visible;
+            ComposerPathTaskResult result = await this.getComposerPathAsync();
+            if (!result.success)
+            {
+                btn.IsEnabled = true;
+                this.composerProgressBar.Visibility = Visibility.Hidden;
+                mainWin.showErrorMessage(result.message, boxTitle);
+                return;
+            }
+            string appPath = mainWin.getAppPath(appItem);
+            if (result.pathList.Contains(appPath))
+            {
+                //排除当前目录
+                result.pathList.Remove(appPath);
+            }
+            string[] pathList = result.pathList.ToArray();
+            if (pathList.Length > 0)
+            {
+                if (MessageBoxResult.Yes == MessageBox.Show("检测到以下目录已经安装了composer,继续安装composer可能无法生效,是否删除下方目录中安装的composer?\r\n" + String.Join(" , ", result.pathList.ToArray()), "操作提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
+                {
+                    List<string> toBeDeleteFiles = new List<string>();
+                    foreach (string tmpPath in pathList)
+                    {
+                        toBeDeleteFiles.Add(tmpPath + @"\composer.bat");
+                        toBeDeleteFiles.Add(tmpPath + @"\composer.phar");
+                    }
+                    TaskResult delResult = await this.deleteFiles(toBeDeleteFiles);
+                    if (!delResult.success)
+                    {
+                        btn.IsEnabled = true;
+                        this.composerProgressBar.Visibility = Visibility.Hidden;
+                        mainWin.showErrorMessage(delResult.message, boxTitle);
+                        return;
+                    }
+                }
+            }
+            //下载composer文件
+            TaskResult taskResult = await this.downloadFileAsync(mainWin.composerUrl, appPath + @"\composer.phar", (long downloadSize, long totalSize) =>
+            {
+                if (totalSize > 0)
+                {
+                    this.Dispatcher.Invoke(() =>
+                    {
+                        this.composerProgressBar.IsIndeterminate = false;
+                        this.composerProgressBar.Minimum = 0;
+                        this.composerProgressBar.Maximum = totalSize;
+                        this.composerProgressBar.Value = downloadSize;
+                    });
+                }
+            });
+            this.composerProgressBar.IsIndeterminate = true;
+            if (!taskResult.success)
+            {
+                //下载失败
+                btn.IsEnabled = true;
+                this.composerProgressBar.Visibility = Visibility.Hidden;
+                mainWin.showErrorMessage(taskResult.message, boxTitle);
+                return;
+            }
+            taskResult = await this.initComposerAsync(appPath);
+            if (!taskResult.success)
+            {
+                //composer初始化失败
+                btn.IsEnabled = true;
+                this.composerProgressBar.Visibility = Visibility.Hidden;
+                mainWin.showErrorMessage(taskResult.message, boxTitle);
+                return;
+            }
+            btn.IsEnabled = true;
+            this.composerProgressBar.Visibility = Visibility.Hidden;
+            MessageBox.Show("安装composer成功", boxTitle + "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private Task<TaskResult> initComposerAsync(string appPath)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    //生成bat文件
+                    File.WriteAllText(appPath + @"\composer.bat", "@php \"%~dp0composer.phar\" %*", Encoding.Default);
+                    //判断Path环境变量中是否有当前目录
+                    List<string> pathList = this.parsePathString(EnvironmentVariableTarget.Machine);
+                    pathList.AddRange(this.parsePathString(EnvironmentVariableTarget.User));
+                    if (!pathList.Contains(appPath))
+                    {
+                        //设置用户变量
+                        List<string> userPathList = this.parsePathString(EnvironmentVariableTarget.User);
+                        userPathList.Add(appPath);
+                        string userPath = String.Join(";",userPathList)+";";
+                        Environment.SetEnvironmentVariable("Path", userPath, EnvironmentVariableTarget.User);
+                    }
+                }
+                catch (Exception e)
+                {
+                    return new TaskResult(e);
+                }
+                return new TaskResult();
+            });
         }
     }
 }

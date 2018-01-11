@@ -34,6 +34,12 @@ namespace php_env
         /// php默认的上传文件大小限制
         /// </summary>
         public string phpUploadMaxFilesize = "8M";
+
+        /// <summary>
+        /// composer下载地址
+        /// </summary>
+        public string composerUrl;
+
         /// <summary>
         /// 标记为重启时退出操作
         /// </summary>
@@ -46,8 +52,8 @@ namespace php_env
             this.vcList = new ObservableCollection<AppItem>();
             ObservableCollection<AppItem> list0 = new ObservableCollection<AppItem>();
             ObservableCollection<AppItem> list1 = new ObservableCollection<AppItem>();
-            this.Resources["phpList"] = list0;
-            this.Resources["nginxList"] = list1;
+            Application.Current.Resources["phpList"] = list0;
+            Application.Current.Resources["nginxList"] = list1;
             this.phpExtensions = new List<string>();
             this.Resources["phpStatus"] = new AppStatus();
             this.Resources["nginxStatus"] = new AppStatus();
@@ -76,6 +82,12 @@ namespace php_env
                 if (comboBox.SelectedIndex == -1) {
                     comboBox.SelectedIndex = 0;
                 }
+                //设置面板composer处PHP列表
+                if (this.settingWin != null) {
+                    if (settingWin.phpSelector.SelectedIndex == -1) {
+                        settingWin.phpSelector.SelectedIndex = 0;
+                    }
+                }
             }
         }
 
@@ -93,11 +105,11 @@ namespace php_env
                 ObservableCollection<AppItem> rList;
                 if (appItem.type == AppType.php)
                 {
-                    rList = this.Resources["phpList"] as ObservableCollection<AppItem>;
+                    rList = Application.Current.Resources["phpList"] as ObservableCollection<AppItem>;
                 }
                 else
                 {
-                    rList = this.Resources["nginxList"] as ObservableCollection<AppItem>;
+                    rList = Application.Current.Resources["nginxList"] as ObservableCollection<AppItem>;
                 }
                 foreach (AppItem tmpItem in newItems)
                 {
@@ -123,11 +135,11 @@ namespace php_env
                 ObservableCollection<AppItem> rList;
                 if (tmpItem.type == AppType.php)
                 {
-                    rList = this.Resources["phpList"] as ObservableCollection<AppItem>;
+                    rList = Application.Current.Resources["phpList"] as ObservableCollection<AppItem>;
                 }
                 else
                 {
-                    rList = this.Resources["nginxList"] as ObservableCollection<AppItem>;
+                    rList = Application.Current.Resources["nginxList"] as ObservableCollection<AppItem>;
                 }
                 if (tmpItem.installed)
                 {
@@ -221,6 +233,14 @@ namespace php_env
             {
                 this.settingWin = new Setting(this);
                 this.settingWin.Owner = this;
+                //设置面板composer处PHP列表
+                if (this.settingWin != null)
+                {
+                    if (settingWin.phpSelector.SelectedIndex == -1)
+                    {
+                        settingWin.phpSelector.SelectedIndex = 0;
+                    }
+                }
             }
             if (this.settingWin.Visibility != Visibility.Visible)
             {
@@ -344,6 +364,9 @@ namespace php_env
                 {
                     this.phpExtensions.Add(tmp.InnerText);
                 }
+                //composer配置初始化
+                XmlElement composer = doc.DocumentElement["composer"];
+                this.composerUrl = composer.InnerText;
             }
             catch (FileNotFoundException e1)
             {
