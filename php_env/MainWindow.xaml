@@ -4,9 +4,9 @@
                       xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
                       Title="流光的php集成环境包"
                       ResizeMode="CanMinimize"
+                      Loaded="MetroWindow_Loaded"
                       WindowStartupLocation="CenterScreen"
                       Closing="MetroWindow_Closing"
-                      Loaded="MetroWindow_Loaded"
                       Height="300"
                       Width="420"
                       BorderBrush="{DynamicResource AccentColorBrush}"
@@ -40,14 +40,14 @@
         <Label Grid.Row="1" Grid.Column="1" VerticalAlignment="Center">php</Label>
         <Label Grid.Row="2" Grid.Column="1" VerticalAlignment="Center">nginx</Label>
         <ComboBox Grid.Row="1" Grid.Column="2" Name="phpSelector" VerticalAlignment="Center" 
-                  ItemsSource="{StaticResource phpList}" DisplayMemberPath="selectionName" 
-                  IsEnabled="{Binding Source={StaticResource phpStatus},Path=canSelect}">
+                  ItemsSource="{Binding}" DisplayMemberPath="appName" 
+                  IsEnabled="{Binding Source={StaticResource appServerItem},Path=canSelectPhp}">
         </ComboBox>
         <ComboBox Grid.Row="2" Grid.Column="2" Name="nginxSelector" VerticalAlignment="Center" 
-                  ItemsSource="{StaticResource nginxList}" DisplayMemberPath="selectionName" 
-                  IsEnabled="{Binding Source={StaticResource nginxStatus},Path=canSelect}">
+                  ItemsSource="{Binding}" DisplayMemberPath="appName" 
+                  IsEnabled="{Binding Source={StaticResource appServerItem},Path=canSelectNginx}">
         </ComboBox>
-        <Button Name="phpBtn" Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" Margin="5,3" Click="appBtn_Click" Content="{Binding Source={StaticResource phpStatus},Path=commandName}"/>
-        <Button Name="nginxBtn" Grid.Row="2" Grid.Column="3" VerticalAlignment="Center" Margin="5,3" Click="appBtn_Click" Content="{Binding Source={StaticResource nginxStatus},Path=commandName}"/>
+        <Button Name="phpBtn" Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" Margin="5,3" Click="appBtn_Click" Content="{Binding Source={StaticResource appServerItem},Path=phpCommandName}"/>
+        <Button Name="nginxBtn" Grid.Row="2" Grid.Column="3" VerticalAlignment="Center" Margin="5,3" Click="appBtn_Click" Content="{Binding Source={StaticResource appServerItem},Path=nginxCommandName}"/>
     </Grid>
 </Controls:MetroWindow>

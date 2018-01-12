@@ -67,7 +67,17 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Items.cs" />
+    <Compile Include="items\AppItem.cs" />
+    <Compile Include="items\AppItemStatus.cs" />
+    <Compile Include="items\AppType.cs" />
+    <Compile Include="items\AppServerItem.cs" />
+    <Compile Include="items\TaskResult.cs" />
+    <Compile Include="service\AppItemInstall.cs" />
+    <Compile Include="service\AppItemUnInstall.cs" />
+    <Compile Include="service\DirectoryHelper.cs" />
+    <Compile Include="service\DownloadHelper.cs" />
+    <Compile Include="service\PathEnvironment.cs" />
+    <Compile Include="service\XmlResource.cs" />
     <Compile Include="Setting.xaml.cs">
       <DependentUpon>Setting.xaml</DependentUpon>
     </Compile>
@@ -106,8 +116,8 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <None Include="default_config\nginx\nginx.conf" />
-    <None Include="default_config\nginx\vhost\localhost.conf" />
+    <None Include="data\default_config\nginx\nginx.conf" />
+    <None Include="data\default_config\nginx\vhost\localhost.conf" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -118,16 +128,17 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="resource.xml" />
+    <Resource Include="data\resource.xml" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="favicon.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="websites\localhost\public_html\index.php" />
+    <Content Include="data\websites\localhost\public_html\index.php" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="icons\setting.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

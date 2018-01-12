@@ -1,17 +1,13 @@
 ﻿//定义是否为代码调试模式
 #define APP_DEBUG 
 using MahApps.Metro.Controls;
+using php_env.items;
+using php_env.service;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Diagnostics;
-using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Xml;
 
 namespace php_env
 {
@@ -20,212 +16,209 @@ namespace php_env
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
-        private string basePath;
-        public ObservableCollection<AppItem> phpList;
-        public ObservableCollection<AppItem> nginxList;
-        public ObservableCollection<AppItem> vcList;
-        public Setting settingWin = null;
-
-        /// <summary>
-        /// 默认开启的PHP扩展
-        /// </summary>
-        public List<string> phpExtensions;
-        /// <summary>
-        /// php默认的上传文件大小限制
-        /// </summary>
-        public string phpUploadMaxFilesize = "8M";
-
-        /// <summary>
-        /// composer下载地址
-        /// </summary>
-        public string composerUrl;
-
         /// <summary>
         /// 标记为重启时退出操作
         /// </summary>
         public bool isWinAppRestart = false;
 
+        /// <summary>
+        /// 设置窗体
+        /// </summary>
+        public Setting settingWin = null;
+        public XmlResource xmlResource = null;
+
+        public ObservableCollection<AppItem> installedPhpList;
+        public ObservableCollection<AppItem> installedNginxList;
+
+        public AppServerItem appServerItem;
+
         public MainWindow()
         {
-            this.phpList = new ObservableCollection<AppItem>();
-            this.nginxList = new ObservableCollection<AppItem>();
-            this.vcList = new ObservableCollection<AppItem>();
-            ObservableCollection<AppItem> list0 = new ObservableCollection<AppItem>();
-            ObservableCollection<AppItem> list1 = new ObservableCollection<AppItem>();
-            Application.Current.Resources["phpList"] = list0;
-            Application.Current.Resources["nginxList"] = list1;
-            this.phpExtensions = new List<string>();
-            this.Resources["phpStatus"] = new AppStatus();
-            this.Resources["nginxStatus"] = new AppStatus();
+
+            //初始化应用状态
+            this.appServerItem = new AppServerItem();
+            this.Resources["appServerItem"] = this.appServerItem;
             InitializeComponent();
-            //处理安装/卸载导致的下拉框元素数量的变化
-            this.phpList.CollectionChanged += list_CollectionChanged;
-            this.nginxList.CollectionChanged += list_CollectionChanged;
-            //下拉框变化时默认选中第一项
-            list0.CollectionChanged += selection_CollectionChanged;
-            list1.CollectionChanged += selection_CollectionChanged;
         }
 
-        private void selection_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            ObservableCollection<AppItem> list = sender as ObservableCollection<AppItem>;
-            //如果存在下拉选项,并且没有选择,则默认选择第一个
-            if (list.Count > 0)
+            try
             {
-                AppItem firstItem = list[0];
-                ComboBox comboBox;
-                if (firstItem.type == AppType.php)
+                this.xmlResource = new XmlResource(DirectoryHelper.getXmlResourcePath());
+            }
+            catch (Exception e1) {
+                this.showErrorMessage(e1.Message, "加载xml资源文件失败");
+            }
+            //初始化已安装的php、nginx列表
+            this.installedPhpList = new ObservableCollection<AppItem>();
+            this.installedNginxList = new ObservableCollection<AppItem>();
+            //已安装下拉列表自动选择第一项
+            this.installedPhpList.CollectionChanged += InstalledPhpList_CollectionChanged;
+            this.installedNginxList.CollectionChanged += InstalledNginxList_CollectionChanged;
+            foreach (AppItem tmpItem in this.xmlResource.phpList)
+            {
+                if (tmpItem.isInstalled)
                 {
-                    comboBox = this.phpSelector;
+                    this.installedPhpList.Add(tmpItem);
                 }
-                else
+                //当安装状态变化时,自动更新已安装列表
+                tmpItem.PropertyChanged += appItem_PropertyChanged;
+            }
+            foreach (AppItem tmpItem in this.xmlResource.nginxList)
+            {
+                if (tmpItem.isInstalled)
                 {
-                    comboBox = this.nginxSelector;
+                    this.installedNginxList.Add(tmpItem);
                 }
-                if (comboBox.SelectedIndex == -1)
+                //当安装状态变化时,自动更新已安装列表
+                tmpItem.PropertyChanged += appItem_PropertyChanged;
+            }
+            //初始化资源
+            this.phpSelector.DataContext = this.installedPhpList;
+            this.nginxSelector.DataContext = this.installedNginxList;
+            Application.Current.Resources["installedPhpList"] = this.installedPhpList;
+        }
+
+        /// <summary>
+        /// php下拉框默认选择第一项
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void InstalledPhpList_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (this.installedPhpList.Count > 0)
+            {
+                if (this.phpSelector.SelectedIndex == -1)
                 {
-                    comboBox.SelectedIndex = 0;
+                    this.phpSelector.SelectedIndex = 0;
                 }
-                //设置面板composer处PHP列表
                 if (this.settingWin != null)
                 {
-                    if (settingWin.phpSelector.SelectedIndex == -1)
-                    {
-                        settingWin.phpSelector.SelectedIndex = 0;
-                    }
+                    this.settingWin.setComposerPhpList();
                 }
             }
         }
 
         /// <summary>
-        /// 首次加载时,自动添加元素,并绑定属性修改事件
+        /// nginx下拉框默认选择第一项
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void list_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void InstalledNginxList_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            IList newItems = e.NewItems;
-            if (newItems.Count > 0)
+            if (this.installedNginxList.Count > 0)
             {
-                AppItem appItem = newItems[0] as AppItem;
-                ObservableCollection<AppItem> rList;
-                if (appItem.type == AppType.php)
+                if (this.nginxSelector.SelectedIndex == -1)
                 {
-                    rList = Application.Current.Resources["phpList"] as ObservableCollection<AppItem>;
-                }
-                else
-                {
-                    rList = Application.Current.Resources["nginxList"] as ObservableCollection<AppItem>;
-                }
-                foreach (AppItem tmpItem in newItems)
-                {
-                    tmpItem.PropertyChanged += tmpItem_PropertyChanged;
-                    if (tmpItem.installed)
-                    {
-                        rList.Add(tmpItem);
-                    }
+                    this.nginxSelector.SelectedIndex = 0;
                 }
             }
         }
 
         /// <summary>
-        /// 当有应用被安装时,下拉框资源添加元素，反之则移除元素
+        /// 自动更新已安装列表
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tmpItem_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void appItem_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            AppItem tmpItem = sender as AppItem;
-            if (e.PropertyName == "installed")
+            AppItem appItem = sender as AppItem;
+            ObservableCollection<AppItem> installedList;
+            if (appItem.type == AppType.PHP)
             {
-                ObservableCollection<AppItem> rList;
-                if (tmpItem.type == AppType.php)
-                {
-                    rList = Application.Current.Resources["phpList"] as ObservableCollection<AppItem>;
-                }
-                else
-                {
-                    rList = Application.Current.Resources["nginxList"] as ObservableCollection<AppItem>;
-                }
-                if (tmpItem.installed)
-                {
-                    rList.Add(tmpItem);
-                }
-                else
-                {
-                    rList.Remove(tmpItem);
-                }
-            }
-        }
-
-        public string getAppPath(AppType appType, string appVersion)
-        {
-            return this.basePath + @"app\" + Enum.GetName(typeof(AppType), appType) + @"\" + appVersion;
-        }
-
-        /// <summary>
-        /// 获取默认的网站目录
-        /// </summary>
-        /// <returns></returns>
-        public string getDefaultWebPath()
-        {
-            return this.basePath + @"websites\localhost\public_html";
-        }
-
-        /// <summary>
-        /// 获取nginx/php配置文件路径
-        /// </summary>
-        /// <returns></returns>
-        public string getDefaultAppConfPath(AppItem appItem)
-        {
-            if (appItem.type == AppType.php)
-            {
-                return this.getAppPath(appItem) + @"\php.ini";
+                installedList = this.installedPhpList;
             }
             else
             {
-                return this.getAppPath(appItem) + @"\conf\vhost\localhost.conf";
+                installedList = this.installedNginxList;
+            }
+            if (e.PropertyName == "isInstalled")
+            {
+                if (appItem.isInstalled)
+                {
+                    installedList.Add(appItem);
+                }
+                else
+                {
+                    installedList.Remove(appItem);
+                }
             }
         }
 
         /// <summary>
-        /// 获取应用所在目录
+        /// 关闭事件
         /// </summary>
-        /// <param name="appItem">应用对象</param>
-        /// <returns></returns>
-        public string getAppPath(AppItem appItem)
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            return this.getAppPath(appItem.type, appItem.version);
+            //重启操作时不提示
+            if (this.isWinAppRestart)
+            {
+                return;
+            }
+            if ((!this.appServerItem.canSelectPhp) || (!this.appServerItem.canSelectNginx))
+            {
+                if (MessageBoxResult.Yes == MessageBox.Show("服务器正在运行,退出时服务器也会停止,你确定要退出吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning))
+                {
+                    //关闭设置窗口
+                    if (this.settingWin != null)
+                    {
+                        this.settingWin.Close();
+                    }
+                    //关闭服务器
+                    await this.appServerItem.closeAllApp();
+                }
+                else
+                {
+                    e.Cancel = true;
+                }
+                return;
+            }
+            if (MessageBoxResult.Yes != MessageBox.Show("你确定要退出程序吗?(退出时,后台任务也会停止!)", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
+            {
+                e.Cancel = true;
+            }
         }
 
         /// <summary>
-        /// 获取应用压缩包保存路径
+        /// 启动或者停止服务器
         /// </summary>
-        /// <param name="appItem">应用对象</param>
-        /// <param name="isTmpPath">是否为临时路径</param>
-        /// <returns></returns>
-        public string getZipPath(AppItem appItem, bool isTmpPath = true)
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void appBtn_Click(object sender, RoutedEventArgs e)
         {
-            string path = this.basePath + @"download\" + Enum.GetName(typeof(AppType), appItem.type) + @"\" + appItem.version;
-            if (isTmpPath)
+            Button btn = sender as Button;
+            TaskResult result;
+            if (btn.Name == "phpBtn")
             {
-                path += @".zip.tmp";
+                this.appServerItem.phpItem = this.phpSelector.SelectedItem as AppItem;
+                result = await this.appServerItem.onCommand(AppType.PHP);
             }
             else
             {
-                path += @".zip";
+                this.appServerItem.nginxItem = this.nginxSelector.SelectedItem as AppItem;
+                result = await this.appServerItem.onCommand(AppType.NGINX);
             }
-            return path;
+            if (!result.success)
+            {
+                this.showErrorMessage(result.message);
+            }
         }
 
         /// <summary>
-        /// 获取默认的配置文件保存目录
+        /// 显示错误消息
         /// </summary>
-        /// <param name="appItem">应用对象</param>
-        /// <returns></returns>
-        public string getDefaultConfigPath(AppItem appItem)
+        /// <param name="message"></param>
+        /// <param name="title"></param>
+        /// <param name="image"></param>
+        public void showErrorMessage(string message, string title = "出错了", MessageBoxImage image = MessageBoxImage.Error)
         {
-            return this.basePath + @"default_config\" + Enum.GetName(typeof(AppType), appItem.type);
+            this.Dispatcher.Invoke(() =>
+            {
+                MessageBox.Show(message, title, MessageBoxButton.OK, image);
+            });
         }
 
         /// <summary>
@@ -238,16 +231,7 @@ namespace php_env
             if (this.settingWin == null)
             {
                 this.settingWin = new Setting(this);
-                this.settingWin.Owner = this;
-                //设置面板composer处PHP列表
-                ObservableCollection<AppItem> rList = Application.Current.Resources["phpList"] as ObservableCollection<AppItem>;
-                if (rList.Count > 0)
-                {
-                    if (settingWin.phpSelector.SelectedIndex == -1)
-                    {
-                        settingWin.phpSelector.SelectedIndex = 0;
-                    }
-                }
+
             }
             if (this.settingWin.Visibility != Visibility.Visible)
             {
@@ -263,247 +247,8 @@ namespace php_env
                 this.settingWin.WindowState = WindowState.Minimized;
                 this.settingWin.Hide();
             }
-
         }
 
-        public async void closeAllApp()
-        {
-
-            AppStatus phpStatus = this.Resources["phpStatus"] as AppStatus;
-            AppStatus nginxStatus = this.Resources["nginxStatus"] as AppStatus;
-
-            if (phpStatus.isRunning)
-            {
-                await this.stopApp(phpStatus.appItem);
-            }
-            if (nginxStatus.isRunning)
-            {
-                await this.stopApp(nginxStatus.appItem);
-            }
-
-        }
-
-        /// <summary>
-        ///  关闭事件
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            //重启操作时不提示
-            if (this.isWinAppRestart)
-            {
-                return;
-            }
-            AppStatus phpStatus = this.Resources["phpStatus"] as AppStatus;
-            AppStatus nginxStatus = this.Resources["nginxStatus"] as AppStatus;
-            if (phpStatus.isRunning || nginxStatus.isRunning)
-            {
-                if (MessageBoxResult.Yes == MessageBox.Show("服务器正在运行,退出时服务器也会停止,你确定要退出吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning))
-                {
-                    //关闭设置窗口
-                    this.settingWin.Close();
-                    //关闭服务器
-                    this.closeAllApp();
-                }
-                else
-                {
-                    e.Cancel = true;
-                }
-                return;
-            }
-            if (MessageBoxResult.Yes != MessageBox.Show("你确定要退出程序吗?(退出时,后台任务也会停止!)", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
-            {
-                e.Cancel = true;
-            }
-        }
-
-        public void showErrorMessage(string err, string title = "出错了")
-        {
-            MessageBox.Show(err, title, MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-
-        public string getResourceXmlPath(bool isTmpPath = false)
-        {
-            if (isTmpPath)
-            {
-                return basePath + "resource.xml.tmp";
-            }
-            return basePath + "resource.xml";
-        }
-
-        private void loadXmlData()
-        {
-            XmlDocument doc = new XmlDocument();
-            try
-            {
-                doc.Load(this.getResourceXmlPath());
-                //
-                XmlNodeList phpListXml = doc.DocumentElement["php"].GetElementsByTagName("item");
-                XmlNodeList nginxListXml = doc.DocumentElement["nginx"].GetElementsByTagName("item");
-                XmlNodeList vcListXml = doc.DocumentElement["vc"].GetElementsByTagName("item");
-                //
-                foreach (XmlElement tmp in phpListXml)
-                {
-                    DirectoryInfo d = new DirectoryInfo(this.getAppPath(AppType.php, tmp.GetAttribute("version")));
-                    AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.GetAttribute("vc"), tmp.InnerText, AppType.php, d.Exists);
-                    this.phpList.Add(tmp1);
-                }
-                foreach (XmlElement tmp in nginxListXml)
-                {
-                    DirectoryInfo d = new DirectoryInfo(this.getAppPath(AppType.nginx, tmp.GetAttribute("version")));
-                    AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.InnerText, AppType.nginx, d.Exists);
-                    this.nginxList.Add(tmp1);
-                }
-                foreach (XmlElement tmp in vcListXml)
-                {
-                    AppItem tmp1 = new AppItem(tmp.GetAttribute("version"), tmp.InnerText, AppType.vc);
-                    this.vcList.Add(tmp1);
-                }
-                //php相关配置初始化
-                string uploadMaxFilesize = doc.DocumentElement["php"].GetAttribute("upload_max_filesize");
-                if (uploadMaxFilesize != null)
-                {
-                    this.phpUploadMaxFilesize = uploadMaxFilesize;
-                }
-                XmlNodeList extensionListXml = doc.DocumentElement["php_extension"].GetElementsByTagName("item");
-                foreach (XmlElement tmp in extensionListXml)
-                {
-                    this.phpExtensions.Add(tmp.InnerText);
-                }
-                //composer配置初始化
-                XmlElement composer = doc.DocumentElement["composer"];
-                this.composerUrl = composer.InnerText;
-            }
-            catch (FileNotFoundException e1)
-            {
-                this.showErrorMessage(e1.Message);
-            }
-        }
-
-        private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            this.basePath = AppDomain.CurrentDomain.BaseDirectory;
-#if (APP_DEBUG)
-
-            DirectoryInfo di = new DirectoryInfo(basePath);
-            basePath = di.Parent.Parent.FullName + @"\";
-#endif
-            this.loadXmlData();
-        }
-
-        private Task<TaskResult> runApp(AppItem appItem)
-        {
-            return Task<TaskResult>.Run(() =>
-            {
-                try
-                {
-                    string appPath = this.getAppPath(appItem);
-                    AppStatus appStatus;
-                    Process myProcess = new Process();
-                    myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
-                    myProcess.StartInfo.WorkingDirectory = appPath;//工作目录
-                    if (appItem.type == AppType.php)
-                    {
-                        appStatus = this.Resources["phpStatus"] as AppStatus;
-                        appStatus.appItem = appItem;
-                        appStatus.process = myProcess;//附加进程对象,用于停止服务时调用
-                        myProcess.StartInfo.FileName = @"php-cgi.exe";
-                        myProcess.StartInfo.Arguments = "-b 127.0.0.1:6757";
-                        myProcess.Start();
-                    }
-                    else
-                    {
-                        appStatus = this.Resources["nginxStatus"] as AppStatus;
-                        appStatus.appItem = appItem;
-                        myProcess.StartInfo.FileName = @"nginx.exe";
-                        myProcess.Start();
-                    }
-                    appItem.isRunning = true;
-                }
-                catch (Exception e)
-                {
-                    return new TaskResult(e);
-                }
-                return new TaskResult();
-            });
-        }
-
-        private Task<TaskResult> stopApp(AppItem appItem)
-        {
-            return Task<TaskResult>.Run(() =>
-            {
-                try
-                {
-
-                    AppStatus appStatus;
-                    if (appItem.type == AppType.php)
-                    {
-                        appStatus = this.Resources["phpStatus"] as AppStatus;
-                        appStatus.process.Kill();
-                        //进程结束时,appStatus会自动更新运行状态属性
-                        //appItem.isRunning = false;
-                    }
-                    else
-                    {
-                        appStatus = this.Resources["nginxStatus"] as AppStatus;
-                        //nginx -s stop
-                        Process myProcess = new Process();
-                        myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
-                        myProcess.StartInfo.WorkingDirectory = this.getAppPath(appItem);//工作目录
-                        myProcess.StartInfo.FileName = @"nginx.exe";
-                        myProcess.StartInfo.Arguments = "-s stop";
-                        myProcess.Start();
-                        appItem.isRunning = false;
-                    }
-                }
-                catch (Exception e)
-                {
-                    return new TaskResult(e);
-                }
-                return new TaskResult();
-            });
-        }
-
-        /// <summary>
-        /// 启动或者停止应用
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private async void appBtn_Click(object sender, RoutedEventArgs e)
-        {
-            Button appButton = sender as Button;
-            ComboBox combo;
-            if (appButton.Name == "phpBtn")
-            {
-                combo = this.phpSelector;
-            }
-            else
-            {
-                combo = this.nginxSelector;
-            }
-            AppItem appItem = combo.SelectedItem as AppItem;
-            if (appItem == null)
-            {
-                this.showErrorMessage("请先选择版本");
-                return;
-            }
-            TaskResult result;
-            if (appItem.isRunning)
-            {
-                //停止
-                result = await this.stopApp(appItem);
-            }
-            else
-            {
-                //启动
-                result = await this.runApp(appItem);
-            }
-            if (!result.success)
-            {
-                this.showErrorMessage(result.message);
-                return;
-            }
-        }
+       
     }
 }
