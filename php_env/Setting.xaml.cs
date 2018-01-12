@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -31,134 +32,16 @@ namespace php_env
         /// 任务失败时执行
         /// </summary>
         /// <param name="message">错误消息</param>
-        private void onItemTaskFailed(Button senderBtn, string message, string title = "出错了")
+        private void onItemTaskFailed(AppItem appItem, string message, string title = "出错了")
         {
             MainWindow mainWin = this.Owner as MainWindow;
-            AppItem appItem = senderBtn.DataContext as AppItem;
             appItem.resetProgress();
             mainWin.showErrorMessage(message, title);
         }
 
-        private void onItemTaskFailed(Button senderBtn, TaskResult result, string title = "出错了")
+        private void onItemTaskFailed(AppItem appItem, TaskResult result, string title = "出错了")
         {
-            this.onItemTaskFailed(senderBtn, result.message, title);
-        }
-
-        private async Task<TaskResult> processInstallAsync(Button senderBtn)
-        {
-            AppItem appItem = senderBtn.DataContext as AppItem;
-            MainWindow mainWin = this.Owner as MainWindow;
-            string appPath = mainWin.getAppPath(appItem);
-            DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
-            TaskResult result;
-            /*安装*/
-            string zipPath = mainWin.getZipPath(appItem, false);
-            string zipTmpPath = mainWin.getZipPath(appItem);
-            FileInfo zipPathInfo = new FileInfo(zipPath);
-            appItem.setPendingProgress();
-            if (!zipPathInfo.Exists)
-            {
-                //下载文件
-                result = await this.downloadFileAsync(appItem.downloadUrl, zipTmpPath, (long processed, long total) =>
-                {
-                    this.Dispatcher.Invoke(() =>
-                    {
-                        if (total != -1)
-                        {
-                            appItem.updateProgress(processed, total);
-                        }
-                    });
-                });
-                if (!result.success)
-                {
-                    return result;
-                }
-                try
-                {
-                    //copy临时文件
-                    FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
-                    zipTmpPathInfo.CopyTo(zipPath, true);
-                    //删除临时文件
-                    zipTmpPathInfo.Delete();
-                }
-                catch (Exception e1)
-                {
-                    return new TaskResult(e1);
-                }
-            }
-            //创建目录
-            if (!appPathInfo.Exists)
-            {
-                try
-                {
-                    appPathInfo.Create();
-                }
-                catch (Exception e1)
-                {
-                    return new TaskResult(e1);
-                }
-            }
-            //解压
-            result = await this.extractFileAsync(zipPath, appPath);
-            if (!result.success)
-            {
-                //解压文件出错
-                return result;
-            }
-            //处理文件
-            if (appItem.type == AppType.php)
-            {
-                FileInfo phpIniFile = new FileInfo(appPath + @"\php.ini-development");
-                if (phpIniFile.Exists)
-                {
-                    try
-                    {
-                        phpIniFile.CopyTo(appPath + @"\php.ini", false);
-                    }
-                    catch (Exception e1)
-                    {
-                        return new TaskResult(e1);
-                    }
-                }
-                //初始化配置文件
-                result = await this.initAppConfig(appItem);
-                if (!result.success)
-                {
-                    return result;
-                }
-            }
-            else if (appItem.type == AppType.nginx)
-            {
-                DirectoryInfo[] dirs = appPathInfo.GetDirectories();
-                result = await this.copyFiles(dirs[0], appPathInfo);
-                if (!result.success)
-                {
-                    //移动文件出错
-                    return result;
-                }
-                result = await this.deleteDir(dirs[0]);
-                if (!result.success)
-                {
-                    //删除临时文件夹出错
-                    return result;
-                }
-                //复制配置文件
-                result = await this.copyFiles(new DirectoryInfo(mainWin.getDefaultConfigPath(appItem)), new DirectoryInfo(appPath + @"\conf"));
-                if (!result.success)
-                {
-                    return result;
-                }
-                //初始化配置文件
-                result = await this.initAppConfig(appItem);
-                if (!result.success)
-                {
-                    return result;
-                }
-            }
-            //任务完成
-            appItem.resetProgress();
-            appItem.installed = true;
-            return new TaskResult();
+            this.onItemTaskFailed(appItem, result.message, title);
         }
 
         /// <summary>
@@ -175,7 +58,6 @@ namespace php_env
             string appPath = mainWin.getAppPath(appItem);
             DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
             //
-            TaskResult result;
             if (appItem.installed)
             {
                 //进度等待
@@ -183,7 +65,7 @@ namespace php_env
                 /*卸载*/
                 if (appItem.isRunning)
                 {
-                    this.onItemTaskFailed(senderBtn, appName + "正在运行中无法卸载");
+                    this.onItemTaskFailed(appItem, appName + "正在运行中无法卸载");
                     return;
                 }
                 string uninstallMessage = "你确定要卸载" + appName + "吗?";
@@ -201,11 +83,12 @@ namespace php_env
                     appItem.resetProgress();
                     return;
                 }
-                result = await this.deleteDir(appPathInfo);
+
+                TaskResult result = await this.deleteDir(appPathInfo);
                 if (!result.success)
                 {
                     //删除目录出错
-                    this.onItemTaskFailed(senderBtn, result, "卸载" + appName + "出错");
+                    this.onItemTaskFailed(appItem, result, "卸载" + appName + "出错");
                     appItem.resetProgress();
                     return;
                 }
@@ -216,7 +99,7 @@ namespace php_env
                     if (!result.success)
                     {
                         //删除目录出错
-                        this.onItemTaskFailed(senderBtn, result, "卸载" + appName + "出错");
+                        this.onItemTaskFailed(appItem, result, "卸载" + appName + "出错");
                         appItem.resetProgress();
                         return;
                     }
@@ -226,19 +109,142 @@ namespace php_env
             }
             else
             {
-                //进度等待
                 appItem.setPendingProgress();
-                result = await this.processInstallAsync(senderBtn);
-                appItem.resetProgress();
-                if (!result.success)
+                this.processInstall(appItem);
+            }
+        }
+
+        private void processInstall(AppItem appItem)
+        {
+            MainWindow mainWin = this.Owner as MainWindow;
+            /*安装*/
+            string zipPath = mainWin.getZipPath(appItem, false);
+            string zipTmpPath = mainWin.getZipPath(appItem);
+            FileInfo zipPathInfo = new FileInfo(zipPath);
+            if (zipPathInfo.Exists)
+            {
+                //继续安装
+                this.continueInstall(appItem, zipPath);
+            }
+            else
+            {
+                //下载压缩包
+                this.downloadFileAsync(appItem.downloadUrl, zipTmpPath, (DownloadProgressChangedEventArgs e) =>
                 {
-                    this.onItemTaskFailed(senderBtn, result, "安装" + appName + "出错");
+                    this.Dispatcher.Invoke(() =>
+                    {
+                        appItem.updateProgress(e.BytesReceived, e.TotalBytesToReceive, e.ProgressPercentage);
+                    });
+                }, () =>
+                {
+                    //下载成功
+                    try
+                    {
+                        //copy临时文件
+                        FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
+                        zipTmpPathInfo.CopyTo(zipPath, true);
+                        //删除临时文件
+                        zipTmpPathInfo.Delete();
+                        //继续安装
+                        this.continueInstall(appItem, zipPath);
+                    }
+                    catch (Exception e)
+                    {
+                        this.onItemTaskFailed(appItem, e.Message);
+                    }
+                }, (Exception e) =>
+                {
+                    this.onItemTaskFailed(appItem, e.Message);
+                });
+            }
+        }
+
+        private async void continueInstall(AppItem appItem, string zipPath)
+        {
+            MainWindow mainWin = this.Owner as MainWindow;
+            string appPath = mainWin.getAppPath(appItem);
+            DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
+            //创建目录
+            if (!appPathInfo.Exists)
+            {
+                try
+                {
+                    appPathInfo.Create();
                 }
-                else
+                catch (Exception e)
                 {
-                    appItem.installed = true;
+                    this.onItemTaskFailed(appItem, e.Message);
+                    return;
                 }
             }
+
+            //解压
+            TaskResult result = await this.extractFileAsync(zipPath, appPath);
+            if (!result.success)
+            {
+                //解压文件出错
+                this.onItemTaskFailed(appItem, result);
+                return;
+            }
+            //处理文件
+            if (appItem.type == AppType.php)
+            {
+                FileInfo phpIniFile = new FileInfo(appPath + @"\php.ini-development");
+                if (phpIniFile.Exists)
+                {
+                    try
+                    {
+                        phpIniFile.CopyTo(appPath + @"\php.ini", false);
+                    }
+                    catch (Exception e1)
+                    {
+                        this.onItemTaskFailed(appItem, e1.Message);
+                        return;
+                    }
+                }
+                //初始化配置文件
+                result = await this.initAppConfig(appItem);
+                if (!result.success)
+                {
+                    this.onItemTaskFailed(appItem, result);
+                    return;
+                }
+            }
+            else if (appItem.type == AppType.nginx)
+            {
+                DirectoryInfo[] dirs = appPathInfo.GetDirectories();
+                result = await this.copyFiles(dirs[0], appPathInfo);
+                if (!result.success)
+                {
+                    //移动文件出错
+                    this.onItemTaskFailed(appItem, result);
+                    return;
+                }
+                result = await this.deleteDir(dirs[0]);
+                if (!result.success)
+                {
+                    //删除临时文件夹出错
+                    this.onItemTaskFailed(appItem, result);
+                    return;
+                }
+                //复制配置文件
+                result = await this.copyFiles(new DirectoryInfo(mainWin.getDefaultConfigPath(appItem)), new DirectoryInfo(appPath + @"\conf"));
+                if (!result.success)
+                {
+                    this.onItemTaskFailed(appItem, result);
+                    return;
+                }
+                //初始化配置文件
+                result = await this.initAppConfig(appItem);
+                if (!result.success)
+                {
+                    this.onItemTaskFailed(appItem, result);
+                    return;
+                }
+            }
+            //任务完成
+            appItem.resetProgress();
+            appItem.installed = true;
         }
 
         /// <summary>
@@ -457,64 +463,41 @@ namespace php_env
         /// <summary>
         /// 下载文件
         /// </summary>
-        /// <param name="url">文件的URL地址</param>
-        /// <param name="savePath">文件的保存路径</param>
-        /// <param name="onFileSizeChange">当文件大小发生改变时执行</param>
-        private Task<TaskResult> downloadFileAsync(string url, string savePath, Action<long, long> onFileSizeChange)
+        /// <param name="url"></param>
+        /// <param name="savePath"></param>
+        /// <param name="onFileSizeChange"></param>
+        /// <param name="downloadSuccess"></param>
+        /// <param name="downloadFailed"></param>
+        /// <returns></returns>
+        private void downloadFileAsync(string url, string savePath, Action<DownloadProgressChangedEventArgs> onFileSizeChange, Action downloadSuccess, Action<Exception> downloadFailed)
         {
-            return Task<TaskResult>.Run(() =>
+            try
             {
-                try
+                //如果目录不存在则自动创建
+                FileInfo savePathInfo = new FileInfo(savePath);
+                DirectoryInfo saveDir = savePathInfo.Directory;
+                if (!saveDir.Exists)
                 {
-                    //如果文件存在则删除文件
-                    FileInfo savePathInfo = new FileInfo(savePath);
-                    if (savePathInfo.Exists)
-                    {
-                        savePathInfo.Delete();
-                    }
-                    else
-                    {
-                        DirectoryInfo saveDir = savePathInfo.Directory;
-                        if (!saveDir.Exists)
-                        {
-                            saveDir.Create();
-                        }
-                    }
-                    //
-                    HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
-                    //添加浏览器头信息
-                    request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36";
-                    request.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8";
-                    using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
-                    {
-                        long processed = 0;
-                        long total = response.ContentLength;
-                        using (Stream stream = response.GetResponseStream())
-                        {
-                            using (FileStream fs = new FileStream(savePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
-                            {
-                                byte[] bArr = new byte[1024];
-                                int size = stream.Read(bArr, 0, bArr.Length);
-                                while (size > 0)
-                                {
-                                    fs.Write(bArr, 0, size);
-                                    //更新下载数据的界面
-                                    processed += (long)size;
-                                    onFileSizeChange(processed, total);
-                                    //
-                                    size = stream.Read(bArr, 0, bArr.Length);
-                                }
-                            }
-                        }
-                    }
-
+                    saveDir.Create();
                 }
-                catch (Exception e)
+                ///
+                WebClient client = new WebClient();
+                client.DownloadProgressChanged += new DownloadProgressChangedEventHandler((object sender, DownloadProgressChangedEventArgs e) =>
                 {
-                    return new TaskResult(e);
-                }
-                return new TaskResult();
-            });
+                    onFileSizeChange(e);
+                });
+                client.DownloadFileCompleted += new AsyncCompletedEventHandler((object sender, AsyncCompletedEventArgs e) =>
+                {
+                    downloadSuccess();
+                });
+                client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36");
+                client.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
+                client.DownloadFileAsync(new Uri(url), savePath);
+            }
+            catch (Exception e)
+            {
+                downloadFailed(e);
+            }
         }
 
         private void viewAction(object sender, RoutedEventArgs e)
@@ -524,7 +507,7 @@ namespace php_env
             Process.Start(@"explorer.exe", mainWin.getAppPath(appItem));
         }
 
-        private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void MetroWindow_Closing(object sender, CancelEventArgs e)
         {
             e.Cancel = true;
             this.WindowState = WindowState.Minimized;
@@ -552,7 +535,7 @@ namespace php_env
             Process.Start(e.Uri.AbsoluteUri);
         }
 
-        private async void updateResource(object sender, RoutedEventArgs e)
+        private void updateResource(object sender, RoutedEventArgs e)
         {
             Button btn = sender as Button;
             MainWindow mainWin = this.Owner as MainWindow;
@@ -560,19 +543,33 @@ namespace php_env
             string resourceXmlTmpPath = mainWin.getResourceXmlPath(true);
             btn.IsEnabled = false;
             this.updateProgressBar.Visibility = Visibility.Visible;
-            TaskResult result = await this.downloadFileAsync("https://github.com/liuguangw/php_env/raw/master/php_env/resource.xml", resourceXmlTmpPath, (long i1, long i2) => { });
-            if (!result.success)
-            {
-                //下载配置文件出错
-                btn.IsEnabled = true;
-                this.updateProgressBar.Visibility = Visibility.Hidden;
-                mainWin.showErrorMessage(result.message);
-                return;
-            }
+            this.downloadFileAsync("https://github.com/liuguangw/php_env/raw/master/php_env/resource.xml", resourceXmlTmpPath, (DownloadProgressChangedEventArgs e1) => { },
+                () =>
+                {
+                    //下载成功后执行
+                    this.processUpdateResource(btn, resourceXmlTmpPath, resourceXmlPath);
+                    //
+                },
+                (Exception e1) =>
+                {
+                    //下载配置文件出错
+                    btn.IsEnabled = true;
+                    this.updateProgressBar.Visibility = Visibility.Hidden;
+                    mainWin.showErrorMessage(e1.Message);
+                }
+            );
+            ////
+
+        }
+
+        private async void processUpdateResource(Button btn, string resourceXmlTmpPath, string resourceXmlPath)
+        {
+            MainWindow mainWin = this.Owner as MainWindow;
             //获取两者的md5
             string localMd5 = "";
             string tmpMd5 = "";
-            result = await this.getFileMd5Async(resourceXmlPath);
+            //本地md5
+            TaskResult result = await this.getFileMd5Async(resourceXmlPath);
             if (!result.success)
             {
                 btn.IsEnabled = true;
@@ -584,6 +581,7 @@ namespace php_env
             {
                 localMd5 = result.message;
             }
+            //下载得到的临时文件md5
             result = await this.getFileMd5Async(resourceXmlTmpPath);
             if (!result.success)
             {
@@ -596,7 +594,7 @@ namespace php_env
             {
                 tmpMd5 = result.message;
             }
-            //判断是否要覆盖
+            //md5不同则覆盖本地文件
             FileInfo tmpFileInfo = new FileInfo(resourceXmlTmpPath);
             if (localMd5 != tmpMd5)
             {
@@ -650,14 +648,17 @@ namespace php_env
         /// </summary>
         /// <param name="target"></param>
         /// <returns></returns>
-        private List<string> parsePathString(EnvironmentVariableTarget target) {
+        private List<string> parsePathString(EnvironmentVariableTarget target)
+        {
             List<string> pathList = new List<string>();
-            string pathStr= Environment.GetEnvironmentVariable("Path", target);
-            if (pathStr == null) {
+            string pathStr = Environment.GetEnvironmentVariable("Path", target);
+            if (pathStr == null)
+            {
                 return pathList;
             }
             pathStr = pathStr.TrimEnd(';');
-            if (pathStr.Length == 0) {
+            if (pathStr.Length == 0)
+            {
                 return pathList;
             }
             string[] pathArray = pathStr.Split(';');
@@ -781,29 +782,43 @@ namespace php_env
                 }
             }
             //下载composer文件
-            TaskResult taskResult = await this.downloadFileAsync(mainWin.composerUrl, appPath + @"\composer.phar", (long downloadSize, long totalSize) =>
+            this.downloadFileAsync(mainWin.composerUrl, appPath + @"\composer.phar", (DownloadProgressChangedEventArgs e1) =>
             {
-                if (totalSize > 0)
+                if (e1.TotalBytesToReceive > 0)
                 {
                     this.Dispatcher.Invoke(() =>
                     {
                         this.composerProgressBar.IsIndeterminate = false;
                         this.composerProgressBar.Minimum = 0;
-                        this.composerProgressBar.Maximum = totalSize;
-                        this.composerProgressBar.Value = downloadSize;
+                        this.composerProgressBar.Maximum = e1.TotalBytesToReceive;
+                        this.composerProgressBar.Value = e1.BytesReceived;
                     });
                 }
-            });
-            this.composerProgressBar.IsIndeterminate = true;
-            if (!taskResult.success)
+            },
+            () =>
+            {
+                //下载成功,继续安装composer
+                this.continueInstallComposer(btn, appPath, boxTitle);
+            }, (Exception e1) =>
             {
                 //下载失败
                 btn.IsEnabled = true;
                 this.composerProgressBar.Visibility = Visibility.Hidden;
-                mainWin.showErrorMessage(taskResult.message, boxTitle);
-                return;
-            }
-            taskResult = await this.initComposerAsync(appPath);
+                mainWin.showErrorMessage(e1.Message, boxTitle);
+            });
+        }
+
+        /// <summary>
+        /// 继续composer安装
+        /// </summary>
+        /// <param name="btn"></param>
+        /// <param name="appPath"></param>
+        /// <param name="boxTitle"></param>
+        private async void continueInstallComposer(Button btn, string appPath, string boxTitle)
+        {
+            MainWindow mainWin = this.Owner as MainWindow;
+            this.composerProgressBar.IsIndeterminate = true;
+            TaskResult taskResult = await this.initComposerAsync(appPath);
             if (!taskResult.success)
             {
                 //composer初始化失败
@@ -833,7 +848,7 @@ namespace php_env
                         //设置用户变量
                         List<string> userPathList = this.parsePathString(EnvironmentVariableTarget.User);
                         userPathList.Add(appPath);
-                        string userPath = String.Join(";",userPathList)+";";
+                        string userPath = String.Join(";", userPathList) + ";";
                         Environment.SetEnvironmentVariable("Path", userPath, EnvironmentVariableTarget.User);
                     }
                 }

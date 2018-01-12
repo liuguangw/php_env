@@ -103,12 +103,40 @@ namespace php_env
             }
         }
 
+        private string _progressPercentage = "-";
+
+        private string progressPercentage {
+            get {
+                return this._progressPercentage;
+            }
+            set {
+                if (this._progressPercentage != value) {
+                    this._progressPercentage = value;
+                    this.Changed("progressPercentage");
+                    this.Changed("statusText");
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// 更新任务进度
+        /// </summary>
+        /// <param name="bytesReceived"></param>
+        /// <param name="totalBytesToReceive"></param>
+        /// <param name="progressPercentage"></param>
+        public void updateProgress(long bytesReceived, long totalBytesToReceive, int progressPercentage)
+        {
+            this.progressMaximum = totalBytesToReceive;
+            this.progressPercentage = progressPercentage.ToString();
+        }
+
         /// <summary>
         /// 重置进度
         /// </summary>
         public void resetProgress()
         {
-            this.updateProgress(0, 0);
+            this.progressMaximum = 0;
         }
 
         /// <summary>
@@ -116,19 +144,7 @@ namespace php_env
         /// </summary>
         public void setPendingProgress()
         {
-            this.updateProgress(0, -1);
-        }
-
-        /// <summary>
-        /// 更新进度
-        /// </summary>
-        /// <param name="progressValue">进度值</param>
-        /// <param name="progressMaximum">进度最大值</param>
-        public void updateProgress(double progressValue, double progressMaximum)
-        {
-            this.progressValue = progressValue;
-            this.progressMaximum = progressMaximum;
-
+            this.progressMaximum = -1;
         }
 
         public bool _canModify = true;
@@ -157,7 +173,7 @@ namespace php_env
         /// <summary>
         /// 进度最大值 0表示已停止 -1表示进度无法显示 其他值为有效值
         /// </summary>
-        public double progressMaximum
+        private double progressMaximum
         {
             get
             {
@@ -170,30 +186,6 @@ namespace php_env
                     this._progressMaximum = value;
                     this.canModify = (value == 0);
                     this.Changed("progressMaximum");
-                    this.Changed("statusText");
-                }
-            }
-        }
-
-
-
-        private double _progressValue = 0;
-
-        /// <summary>
-        /// 进度值
-        /// </summary>
-        public double progressValue
-        {
-            get
-            {
-                return this._progressValue;
-            }
-            set
-            {
-                if (this._progressValue != value)
-                {
-                    this._progressValue = value;
-                    this.Changed("progressValue");
                     this.Changed("statusText");
                 }
             }
@@ -223,7 +215,7 @@ namespace php_env
                 }
                 else if (this._progressMaximum > 0)
                 {
-                    return "下载中[" + Math.Floor(this._progressValue * 100 / this._progressMaximum).ToString() + "%]";
+                    return "下载中[" + this.progressPercentage + "%]";
                 }
                 return this.installed ? ("已安装" + (this.isRunning ? "[运行中]" : "")) : "未安装";
             }
