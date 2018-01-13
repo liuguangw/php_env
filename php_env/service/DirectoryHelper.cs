@@ -16,11 +16,11 @@ namespace php_env.service
                 if (_dataPath == null)
                 {
                     string path = System.AppDomain.CurrentDomain.BaseDirectory;
-#if (RELEASE)
-#else
-
+#if (DEBUG)
                     DirectoryInfo di = new DirectoryInfo(path);
                     path = di.Parent.Parent.FullName + @"\";
+#else
+
 #endif
                     _dataPath = path + "data";
                 }
@@ -28,7 +28,7 @@ namespace php_env.service
             }
         }
 
-        public static string getAppPath(AppType appType,string appVersion)
+        public static string getAppPath(AppType appType, string appVersion)
         {
             return dataPath + @"\app\" + System.Enum.GetName(typeof(AppType), appType).ToLower() + "\\" + appVersion;
         }
@@ -44,24 +44,28 @@ namespace php_env.service
         /// <param name="appItem"></param>
         /// <param name="isTmpPath"></param>
         /// <returns></returns>
-        public static string getAppZipPath(this AppItem appItem,bool isTmpPath=false)
+        public static string getAppZipPath(this AppItem appItem, bool isTmpPath = false)
         {
-            string path= dataPath + @"\download\" + System.Enum.GetName(typeof(AppType), appItem.type).ToLower() + "\\" + appItem.version+".zip";
-            if (isTmpPath) {
+            string path = dataPath + @"\download\" + System.Enum.GetName(typeof(AppType), appItem.type).ToLower() + "\\" + appItem.version + ".zip";
+            if (isTmpPath)
+            {
                 path += ".tmp";
             }
             return path;
         }
 
-        public static string getXmlResourcePath(bool isTmpPath = false) {
+        public static string getXmlResourcePath(bool isTmpPath = false)
+        {
             string path = dataPath + @"\resource.xml";
-            if (isTmpPath) {
+            if (isTmpPath)
+            {
                 path += ".tmp";
             }
             return path;
         }
 
-        public static string getNginxDefaultConfigPath() {
+        public static string getNginxDefaultConfigPath()
+        {
             return dataPath + @"\default_config\nginx";
         }
 

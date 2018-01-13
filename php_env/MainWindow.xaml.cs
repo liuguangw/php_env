@@ -1,6 +1,4 @@
-﻿//定义是否为代码调试模式
-#define APP_DEBUG 
-using MahApps.Metro.Controls;
+﻿using MahApps.Metro.Controls;
 using php_env.items;
 using php_env.service;
 using System;
