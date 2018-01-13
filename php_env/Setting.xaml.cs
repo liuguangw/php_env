@@ -1,6 +1,7 @@
 ﻿using MahApps.Metro.Controls;
 using php_env.items;
 using php_env.service;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
 
@@ -19,6 +20,7 @@ namespace php_env
             this.nginxList.DataContext = mainWin.xmlResource.nginxList;
             this.vcList.DataContext = mainWin.xmlResource.vcList;
             //
+            this.phpSelector.DataContext = mainWin.installedPhpList;
             if (mainWin.installedPhpList.Count > 0)
             {
                 this.setComposerPhpList();
@@ -72,9 +74,10 @@ namespace php_env
                 AppItemUnInstall unInstallService = new AppItemUnInstall(this);
                 result = await unInstallService.removeAppAsync(appItem);
             }
-            if (!result.success) {
+            if (!result.success)
+            {
                 MainWindow mainWin = this.Owner as MainWindow;
-                mainWin.showErrorMessage(result.message,boxTitle);
+                mainWin.showErrorMessage(result.message, boxTitle);
             }
         }
 

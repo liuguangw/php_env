@@ -5,7 +5,6 @@ using php_env.items;
 using php_env.service;
 using System;
 using System.Collections.ObjectModel;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -27,10 +26,10 @@ namespace php_env
         public Setting settingWin = null;
         public XmlResource xmlResource = null;
 
+        public AppServerItem appServerItem;
+        //已安装列表
         public ObservableCollection<AppItem> installedPhpList;
         public ObservableCollection<AppItem> installedNginxList;
-
-        public AppServerItem appServerItem;
 
         public MainWindow()
         {
@@ -39,6 +38,9 @@ namespace php_env
             this.appServerItem = new AppServerItem();
             this.Resources["appServerItem"] = this.appServerItem;
             InitializeComponent();
+            //初始化下拉列表资源
+            this.phpSelector.DataContext = this.installedPhpList = new ObservableCollection<AppItem>();
+            this.nginxSelector.DataContext = this.installedNginxList = new ObservableCollection<AppItem>();
         }
 
         private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
@@ -47,13 +49,11 @@ namespace php_env
             {
                 this.xmlResource = new XmlResource(DirectoryHelper.getXmlResourcePath());
             }
-            catch (Exception e1) {
+            catch (Exception e1)
+            {
                 this.showErrorMessage(e1.Message, "加载xml资源文件失败");
             }
-            //初始化已安装的php、nginx列表
-            this.installedPhpList = new ObservableCollection<AppItem>();
-            this.installedNginxList = new ObservableCollection<AppItem>();
-            //已安装下拉列表自动选择第一项
+            //已安装下拉列表默认选择第一项
             this.installedPhpList.CollectionChanged += InstalledPhpList_CollectionChanged;
             this.installedNginxList.CollectionChanged += InstalledNginxList_CollectionChanged;
             foreach (AppItem tmpItem in this.xmlResource.phpList)
@@ -74,10 +74,6 @@ namespace php_env
                 //当安装状态变化时,自动更新已安装列表
                 tmpItem.PropertyChanged += appItem_PropertyChanged;
             }
-            //初始化资源
-            this.phpSelector.DataContext = this.installedPhpList;
-            this.nginxSelector.DataContext = this.installedNginxList;
-            Application.Current.Resources["installedPhpList"] = this.installedPhpList;
         }
 
         /// <summary>
@@ -249,6 +245,6 @@ namespace php_env
             }
         }
 
-       
+
     }
 }
