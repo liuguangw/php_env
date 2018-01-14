@@ -43,9 +43,11 @@ namespace php_env.service
         {
             return Task.Run(async () =>
             {
-                //删除已安装的composer
+                List<string> userPathList = PathEnvironment.getPathList(EnvironmentVariableTarget.User);
+                //删除已安装的composer:文件+用户Path环境变量
                 if (toRemoveDirs != null)
                 {
+                    bool needDelEnv = false;
                     foreach (string tmpPath in toRemoveDirs)
                     {
                         FileInfo batFile = new FileInfo(tmpPath + @"\composer.bat");
@@ -58,6 +60,15 @@ namespace php_env.service
                         {
                             pharFile.Delete();
                         }
+                        if (userPathList.Contains(tmpPath))
+                        {
+                            needDelEnv = true;
+                            userPathList.Remove(tmpPath);
+                        }
+                    }
+                    if (needDelEnv)
+                    {
+                        PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
                     }
                 }
                 //获取url
@@ -90,7 +101,6 @@ namespace php_env.service
                 pathList.AddRange(PathEnvironment.getPathList(EnvironmentVariableTarget.User));
                 if (!pathList.Contains(appPath))
                 {
-                    List<string> userPathList = PathEnvironment.getPathList(EnvironmentVariableTarget.User);
                     userPathList.Add(appPath);
                     PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
                 }
