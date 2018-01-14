@@ -2,8 +2,11 @@
 using php_env.items;
 using php_env.service;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace php_env
 {
@@ -57,7 +60,7 @@ namespace php_env
         /// <param name="e"></param>
         private async void mainAction(object sender, RoutedEventArgs e)
         {
-            System.Windows.Controls.Button senderBtn = sender as System.Windows.Controls.Button;
+            Button senderBtn = sender as Button;
             AppItem appItem = senderBtn.DataContext as AppItem;
             if (!appItem.isInstalled)
             {
@@ -80,7 +83,22 @@ namespace php_env
             else
             {
                 string boxTitle = "卸载" + appItem.appName;
-                //@todo 卸载确认
+                //卸载确认
+                string msg = "你确定要卸载" + appItem.appName + "吗?";
+                if (appItem.type == AppType.PHP)
+                {
+                    //判断目录下是否安装了composer
+                    FileInfo composerInfo = new FileInfo(appItem.getAppPath() + @"\composer.bat");
+                    if (composerInfo.Exists)
+                    {
+                        msg += "(目录下安装的composer也会一起移除)";
+                    }
+                }
+                if (MessageBoxResult.Yes != MessageBox.Show(msg, boxTitle, MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
+                {
+                    return;
+                }
+                //
                 AppItemUnInstall unInstallService = new AppItemUnInstall(this);
                 try
                 {
@@ -103,16 +121,114 @@ namespace php_env
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void updateResource(object sender, RoutedEventArgs e)
-        { }
+        private async void updateResource(object sender, RoutedEventArgs e)
+        {
+            Button btn = sender as Button;
+            MainWindow mainWin = this.Owner as MainWindow;
+            string boxTitle = "资源更新";
+            //状态等待
+            btn.IsEnabled = false;
+            this.updateProgressBar.IsIndeterminate = true;
+            this.updateProgressBar.Visibility = Visibility.Visible;
+            try
+            {
+                ResourceUpdate updateService = new ResourceUpdate(this);
+                bool hasUpdate = await updateService.updateAsync(DirectoryHelper.getXmlResourcePath(), DirectoryHelper.getXmlResourcePath(true));
+                //状态还原
+                btn.IsEnabled = true;
+                this.updateProgressBar.IsIndeterminate = true;
+                this.updateProgressBar.Visibility = Visibility.Hidden;
+                if (hasUpdate)
+                {
+                    //更新成功
+                    if (MessageBox.Show("更新资源文件成功,重启本程序生效,确定要重启程序吗", "", MessageBoxButton.YesNoCancel, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    {
+                        //重启应用
+                        await mainWin.closeAllApp();
+                        mainWin.isWinAppRestart = true;
+                        Process.Start(Process.GetCurrentProcess().MainModule.FileName);
+                        Application.Current.Shutdown();
+                    }
+                }
+                else {
+                    //已经是最新
+                    mainWin.showErrorMessage("本地资源文件已经是最新版", boxTitle,MessageBoxImage.Information);
+                }
+            }
+            catch (Exception e1)
+            {
+                //状态还原
+                btn.IsEnabled = true;
+                this.updateProgressBar.IsIndeterminate = true;
+                this.updateProgressBar.Visibility = Visibility.Hidden;
+                //
+                mainWin.showErrorMessage(e1.Message, boxTitle);
+            }
+        }
 
         /// <summary>
         /// 安装composer
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void installComposer(object sender, RoutedEventArgs e)
-        { }
+        private async void installComposer(object sender, RoutedEventArgs e)
+        {
+            Button btn = sender as Button;
+            AppItem appItem = this.phpSelector.SelectedItem as AppItem;
+            MainWindow mainWin = this.Owner as MainWindow;
+            string boxTitle = "安装composer";
+            if (appItem == null)
+            {
+                mainWin.showErrorMessage("需要先安装php", boxTitle);
+            }
+            else
+            {
+                ComposerInstall installService = new ComposerInstall(this);
+                string appPath = appItem.getAppPath();
+                List<string> toRemoveDirs = null;
+                //等待状态
+                btn.IsEnabled = false;
+                this.phpSelector.IsEnabled = false;
+                this.composerProgressBar.IsIndeterminate = true;
+                this.composerProgressBar.Visibility = Visibility.Visible;
+                try
+                {
+                    //从path环境变量中,获取已经安装了composer的目录
+                    List<string> installedDirs = await installService.getInstalledDirsAsync();
+                    if (installedDirs.Contains(appPath))
+                    {
+                        installedDirs.Remove(appPath);
+                    }
+                    if (installedDirs.Count > 0)
+                    {
+                        string tipMessage = "检测到以下目录已经安装了composer,继续安装composer可能无法生效,是否删除下方目录中安装的composer?\r\n";
+                        if (MessageBoxResult.Yes == MessageBox.Show(tipMessage + String.Join(" , ", installedDirs), boxTitle, MessageBoxButton.YesNoCancel, MessageBoxImage.Question))
+                        {
+                            toRemoveDirs = installedDirs;
+                        }
+                    }
+                    //执行安装操作
+                    await installService.installAsync(appPath, toRemoveDirs);
+                    //状态还原
+                    btn.IsEnabled = true;
+                    this.phpSelector.IsEnabled = true;
+                    this.composerProgressBar.IsIndeterminate = true;
+                    this.composerProgressBar.Visibility = Visibility.Hidden;
+                    //
+                    mainWin.showErrorMessage("composer安装成功", boxTitle, MessageBoxImage.Information);
+                }
+                catch (Exception e1)
+                {
+                    //状态还原
+                    btn.IsEnabled = true;
+                    this.phpSelector.IsEnabled = true;
+                    this.composerProgressBar.IsIndeterminate = true;
+                    this.composerProgressBar.Visibility = Visibility.Hidden;
+                    //
+                    mainWin.showErrorMessage(e1.Message, boxTitle);
+                }
+            }
+        }
 
         /// <summary>
         /// 浏览目录

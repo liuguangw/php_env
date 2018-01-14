@@ -73,9 +73,11 @@
     <Compile Include="items\AppServerItem.cs" />
     <Compile Include="service\AppItemInstall.cs" />
     <Compile Include="service\AppItemUnInstall.cs" />
+    <Compile Include="service\ComposerInstall.cs" />
     <Compile Include="service\DirectoryHelper.cs" />
     <Compile Include="service\DownloadHelper.cs" />
     <Compile Include="service\PathEnvironment.cs" />
+    <Compile Include="service\ResourceUpdate.cs" />
     <Compile Include="service\XmlResource.cs" />
     <Compile Include="Setting.xaml.cs">
       <DependentUpon>Setting.xaml</DependentUpon>

@@ -3,6 +3,7 @@ using php_env.items;
 using php_env.service;
 using System;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -140,6 +141,29 @@ namespace php_env
             }
         }
 
+        public Task closeAllApp()
+        {
+            return Task.Run(() =>
+            {
+                this.Dispatcher.Invoke(async () =>
+                {
+                    //关闭设置窗口
+                    if (this.settingWin != null)
+                    {
+                        this.settingWin.Close();
+                    }
+                    //关闭服务器
+                    try
+                    {
+                        await this.appServerItem.closeAllApp();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                });
+            });
+        }
+
         /// <summary>
         /// 关闭事件
         /// </summary>
@@ -156,19 +180,7 @@ namespace php_env
             {
                 if (MessageBoxResult.Yes == MessageBox.Show("服务器正在运行,退出时服务器也会停止,你确定要退出吗?", "退出提示", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning))
                 {
-                    //关闭设置窗口
-                    if (this.settingWin != null)
-                    {
-                        this.settingWin.Close();
-                    }
-                    //关闭服务器
-                    try
-                    {
-                        await this.appServerItem.closeAllApp();
-                    }
-                    catch (Exception)
-                    {
-                    }
+                    await this.closeAllApp();
                 }
                 else
                 {
