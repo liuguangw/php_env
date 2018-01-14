@@ -71,7 +71,6 @@
     <Compile Include="items\AppItemStatus.cs" />
     <Compile Include="items\AppType.cs" />
     <Compile Include="items\AppServerItem.cs" />
-    <Compile Include="items\TaskResult.cs" />
     <Compile Include="service\AppItemInstall.cs" />
     <Compile Include="service\AppItemUnInstall.cs" />
     <Compile Include="service\DirectoryHelper.cs" />

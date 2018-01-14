@@ -162,7 +162,13 @@ namespace php_env
                         this.settingWin.Close();
                     }
                     //关闭服务器
-                    await this.appServerItem.closeAllApp();
+                    try
+                    {
+                        await this.appServerItem.closeAllApp();
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
                 else
                 {
@@ -184,20 +190,24 @@ namespace php_env
         private async void appBtn_Click(object sender, RoutedEventArgs e)
         {
             Button btn = sender as Button;
-            TaskResult result;
+            AppType appType;
             if (btn.Name == "phpBtn")
             {
+                appType = AppType.PHP;
                 this.appServerItem.phpItem = this.phpSelector.SelectedItem as AppItem;
-                result = await this.appServerItem.onCommand(AppType.PHP);
             }
             else
             {
+                appType = AppType.NGINX;
                 this.appServerItem.nginxItem = this.nginxSelector.SelectedItem as AppItem;
-                result = await this.appServerItem.onCommand(AppType.NGINX);
             }
-            if (!result.success)
+            try
             {
-                this.showErrorMessage(result.message);
+                await this.appServerItem.onCommand(appType);
+            }
+            catch (Exception e1)
+            {
+                this.showErrorMessage(e1.Message);
             }
         }
 

@@ -14,119 +14,37 @@ namespace php_env.service
             this.setting = setting;
         }
 
-        public Task<TaskResult> removeAppAsync(AppItem appItem)
+        public Task removeAppAsync(AppItem appItem)
         {
-            if (appItem.type == AppType.PHP)
+            return Task.Run(() =>
             {
-                return this.removePhpAsync(appItem);
-            }
-            else
-            {
-                return this.removeNginxAsync(appItem);
-            }
-        }
-
-        private Task<TaskResult> removePhpAsync(AppItem appItem)
-        {
-            return Task<TaskResult>.Run(() =>
-            {
-                this.setting.Dispatcher.Invoke(() =>
-                {
-                    appItem.status = AppItemStatus.UNDER_UNISTALL;
-                });
                 string appPath = appItem.getAppPath();
-                try
+                //删除文件夹
+                DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
+                if (appPathInfo.Exists)
                 {
-                    //删除文件夹
-                    DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
-                    if (appPathInfo.Exists)
-                    {
-                        appPathInfo.Delete(true);
-                    }
-                    //从用户Path变量中删除
-                    System.Collections.Generic.List<string> userPathList = PathEnvironment.getPathList(EnvironmentVariableTarget.User);
-                    if (userPathList.Contains(appPath)) {
-                        userPathList.Remove(appPath);
-                        PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
-                    }
-                    this.setting.Dispatcher.Invoke(() =>
-                    {
-                        appItem.status = AppItemStatus.NOT_INSTALL;
-                    });
+                    appPathInfo.Delete(true);
                 }
-                catch (Exception e)
+                if (appItem.type == AppType.PHP)
                 {
-                    return this.onTaskFailed(appItem, e);
+                    //用户Path环境变量中删除
+                    this.removeUserPath(appPath);
                 }
-                return new TaskResult();
             });
         }
 
-        private Task<TaskResult> removeNginxAsync(AppItem appItem)
+        /// <summary>
+        /// 用户Path环境变量中删除
+        /// </summary>
+        /// <param name="appPath"></param>
+        private void removeUserPath(string appPath)
         {
-            return Task<TaskResult>.Run(() =>
+            System.Collections.Generic.List<string> userPathList = PathEnvironment.getPathList(EnvironmentVariableTarget.User);
+            if (userPathList.Contains(appPath))
             {
-                this.setting.Dispatcher.Invoke(() =>
-                {
-                    appItem.status = AppItemStatus.UNDER_UNISTALL;
-                });
-                string appPath = appItem.getAppPath();
-                try
-                {
-                    //删除文件夹
-                    DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
-                    if (appPathInfo.Exists)
-                    {
-                        appPathInfo.Delete(true);
-                    }
-                    this.setting.Dispatcher.Invoke(() =>
-                    {
-                        appItem.status = AppItemStatus.NOT_INSTALL;
-                    });
-                }
-                catch (Exception e)
-                {
-                    return this.onTaskFailed(appItem, e);
-                }
-                return new TaskResult();
-            });
-        }
-
-        /// <summary>
-        /// 卸载失败
-        /// </summary>
-        /// <param name="appItem"></param>
-        /// <param name="result"></param>
-        /// <returns></returns>
-        private TaskResult onTaskFailed(AppItem appItem, TaskResult result)
-        {
-            this.setting.Dispatcher.Invoke(() =>
-            {
-                appItem.status = AppItemStatus.INSTALLED;
-            });
-            return result;
-        }
-
-        /// <summary>
-        /// 卸载失败
-        /// </summary>
-        /// <param name="appItem"></param>
-        /// <param name="result"></param>
-        /// <returns></returns>
-        private TaskResult onTaskFailed(AppItem appItem, string message)
-        {
-            return this.onTaskFailed(appItem, new TaskResult(message));
-        }
-
-        /// <summary>
-        /// 卸载失败
-        /// </summary>
-        /// <param name="appItem"></param>
-        /// <param name="result"></param>
-        /// <returns></returns>
-        private TaskResult onTaskFailed(AppItem appItem, Exception e)
-        {
-            return this.onTaskFailed(appItem, new TaskResult(e));
+                userPathList.Remove(appPath);
+                PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
+            }
         }
     }
 }

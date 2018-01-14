@@ -131,7 +131,7 @@ namespace php_env.items
         /// <summary>
         /// 点击了启动或者停止按钮时执行
         /// </summary>
-        public Task<TaskResult> onCommand(AppType appType)
+        public Task onCommand(AppType appType)
         {
             AppItem appItem = null;
             if (appType == AppType.PHP)
@@ -142,60 +142,56 @@ namespace php_env.items
             {
                 appItem = this._nginxItem;
             }
-            return Task<TaskResult>.Run(() =>
+            return Task.Run(async () =>
             {
                 if (appItem == null)
                 {
-                    return new TaskResult("请先安装" + Enum.GetName(typeof(AppType), appType).ToLower());
+                    throw new Exception("请先安装" + Enum.GetName(typeof(AppType), appType).ToLower());
                 }
                 if (!appItem.isRunning)
                 {
-                    return this.runAppItem(appItem);
+                    await this.runAppItem(appItem);
                 }
                 else
                 {
-                    return this.stopAppItem(appItem);
+                    await this.stopAppItem(appItem);
                 }
             });
         }
 
-        public TaskResult stopAppItem(AppType appType)
+        public Task stopAppItem(AppType appType)
         {
-            try
-            {
-                if (appType == AppType.PHP)
-                {
-                    this.phpItemProcess.Kill();
-                    //进程结束时,会自动更新运行状态属性
-                }
-                else
-                {
-                    AppItem appItem = this.nginxItem;
-                    //nginx -s stop
-                    Process myProcess = new Process();
-                    myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
-                    myProcess.StartInfo.WorkingDirectory = appItem.getAppPath();//工作目录
-                    myProcess.StartInfo.FileName = @"nginx.exe";
-                    myProcess.StartInfo.Arguments = "-s stop";
-                    myProcess.Start();
-                    appItem.status = AppItemStatus.INSTALLED;
-                }
-                return new TaskResult();
-            }
-            catch (Exception e)
-            {
-                return new TaskResult(e);
-            }
+            return Task.Run(() =>
+           {
+               if (appType == AppType.PHP)
+               {
+                   this.phpItemProcess.Kill();
+                   //进程结束时,会自动更新运行状态属性
+               }
+               else
+               {
+                   AppItem appItem = this.nginxItem;
+                   //nginx -s stop
+                   Process myProcess = new Process();
+                   myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
+                   myProcess.StartInfo.WorkingDirectory = appItem.getAppPath();//工作目录
+                   myProcess.StartInfo.FileName = @"nginx.exe";
+                   myProcess.StartInfo.Arguments = "-s stop";
+                   myProcess.Start();
+                   appItem.status = AppItemStatus.INSTALLED;
+               }
+           });
         }
 
-        private TaskResult stopAppItem(AppItem appItem)
+        private Task stopAppItem(AppItem appItem)
         {
             return this.stopAppItem(appItem.type);
         }
 
-        private TaskResult runAppItem(AppItem appItem)
+        private Task runAppItem(AppItem appItem)
         {
-            try
+
+            return Task.Run(() =>
             {
                 Process myProcess = new Process();
                 myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
@@ -220,40 +216,23 @@ namespace php_env.items
                     myProcess.Start();
                 }
                 appItem.status = AppItemStatus.UNDER_RUNNING;
-                return new TaskResult();
-            }
-            catch (Exception e)
-            {
-                return new TaskResult(e);
-            }
+            });
         }
 
-        public Task<TaskResult> closeAllApp()
+        public Task closeAllApp()
         {
-            return Task<TaskResult>.Run(() =>
+            return Task.Run(async () =>
             {
-                try
+                if (!this.canSelectPhp)
                 {
-                    TaskResult result = null;
-                    if (!this.canSelectPhp) {
-                        //停止php
-                        result = this.stopAppItem(AppType.PHP);
-                        if (!result.success) {
-                            return result;
-                        }
-                        
-                    }
-                    if (!this.canSelectNginx) {
-                        //停止nginx
-                        result = this.stopAppItem(AppType.NGINX);
-                        if (!result.success) {
-                            return result;
-                        }
-                    }
-                    return new TaskResult();
+                    //停止php
+                    await this.stopAppItem(AppType.PHP);
+
                 }
-                catch (Exception e) {
-                    return new TaskResult(e);
+                if (!this.canSelectNginx)
+                {
+                    //停止nginx
+                    await this.stopAppItem(AppType.NGINX);
                 }
             });
         }

@@ -1,7 +1,7 @@
 ﻿using MahApps.Metro.Controls;
 using php_env.items;
 using php_env.service;
-using System.Collections.ObjectModel;
+using System;
 using System.Diagnostics;
 using System.Windows;
 
@@ -59,25 +59,42 @@ namespace php_env
         {
             System.Windows.Controls.Button senderBtn = sender as System.Windows.Controls.Button;
             AppItem appItem = senderBtn.DataContext as AppItem;
-            TaskResult result;
-            string boxTitle;
             if (!appItem.isInstalled)
             {
-                boxTitle = "安装" + appItem.appName;
+                string boxTitle = "安装" + appItem.appName;
                 AppItemInstall installService = new AppItemInstall(this);
-                result = await installService.installAppAsync(appItem);
+                try
+                {
+                    appItem.status = AppItemStatus.UNDER_INSTALL;
+                    await installService.installAppAsync(appItem);
+                    appItem.status = AppItemStatus.INSTALLED;
+                }
+                catch (Exception e1)
+                {
+                    appItem.status = AppItemStatus.NOT_INSTALL;
+                    appItem.progressPercentage = "";
+                    MainWindow mainWin = this.Owner as MainWindow;
+                    mainWin.showErrorMessage(e1.Message, boxTitle);
+                }
             }
             else
             {
-                boxTitle = "卸载" + appItem.appName;
+                string boxTitle = "卸载" + appItem.appName;
                 //@todo 卸载确认
                 AppItemUnInstall unInstallService = new AppItemUnInstall(this);
-                result = await unInstallService.removeAppAsync(appItem);
-            }
-            if (!result.success)
-            {
-                MainWindow mainWin = this.Owner as MainWindow;
-                mainWin.showErrorMessage(result.message, boxTitle);
+                try
+                {
+                    appItem.status = AppItemStatus.UNDER_UNISTALL;
+                    await unInstallService.removeAppAsync(appItem);
+                    appItem.status = AppItemStatus.NOT_INSTALL;
+                }
+                catch (Exception e1)
+                {
+                    appItem.status = AppItemStatus.INSTALLED;
+                    appItem.progressPercentage = "";
+                    MainWindow mainWin = this.Owner as MainWindow;
+                    mainWin.showErrorMessage(e1.Message, boxTitle);
+                }
             }
         }
 
