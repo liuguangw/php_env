@@ -25,8 +25,19 @@ namespace php_env.service
                 if (!zipPathInfo.Exists)
                 {
                     string zipTmpPath = appItem.getAppZipPath(true);
-                    await this.downloadAppAsync(appItem, zipPath, zipTmpPath);
+                    await this.downloadAppAsync(appItem, zipPath, zipTmpPath, continueInstall);
                 }
+                else {
+                    await this.continueInstall(appItem);
+                }
+            });
+        }
+
+        private Task continueInstall(AppItem appItem)
+        {
+
+            return Task.Run(async () =>
+            {
                 //创建目录
                 string appPath = appItem.getAppPath();
                 DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
@@ -35,6 +46,7 @@ namespace php_env.service
                     appPathInfo.Create();
                 }
                 //解压
+                string zipPath = appItem.getAppZipPath();
                 System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, appPath);
                 //执行后续步骤
                 if (appItem.type == AppType.PHP)
@@ -48,7 +60,7 @@ namespace php_env.service
             });
         }
 
-        private Task downloadAppAsync(AppItem appItem, string zipPath, string zipTmpPath)
+        private Task downloadAppAsync(AppItem appItem, string zipPath, string zipTmpPath, Func<AppItem,Task> onDownloadSuccess)
         {
             return Task.Run(async () =>
             {
@@ -59,16 +71,20 @@ namespace php_env.service
                     {
                         appItem.progressPercentage = progressPercentage;
                     });
-                });
-                this.setting.Dispatcher.Invoke(() =>
+                }, async () =>
                 {
-                    appItem.progressPercentage = "";
+                    this.setting.Dispatcher.Invoke(() =>
+                    {
+                        appItem.progressPercentage = "";
+                    });
+                    //copy文件
+                    FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
+                    zipTmpPathInfo.CopyTo(zipPath, true);
+                    //删除临时文件
+                    zipTmpPathInfo.Delete();
+                    //继续执行
+                    await onDownloadSuccess.Invoke(appItem);
                 });
-                //copy文件
-                FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
-                zipTmpPathInfo.CopyTo(zipPath, true);
-                //删除临时文件
-                zipTmpPathInfo.Delete();
             });
         }
 

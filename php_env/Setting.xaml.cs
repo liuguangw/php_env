@@ -133,27 +133,8 @@ namespace php_env
             try
             {
                 ResourceUpdate updateService = new ResourceUpdate(this);
-                bool hasUpdate = await updateService.updateAsync(DirectoryHelper.getXmlResourcePath(), DirectoryHelper.getXmlResourcePath(true));
-                //状态还原
-                btn.IsEnabled = true;
-                this.updateProgressBar.IsIndeterminate = true;
-                this.updateProgressBar.Visibility = Visibility.Hidden;
-                if (hasUpdate)
-                {
-                    //更新成功
-                    if (MessageBox.Show("更新资源文件成功,重启本程序生效,确定要重启程序吗", "", MessageBoxButton.YesNoCancel, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                    {
-                        //重启应用
-                        await mainWin.closeAllApp();
-                        mainWin.isWinAppRestart = true;
-                        Process.Start(Process.GetCurrentProcess().MainModule.FileName);
-                        Application.Current.Shutdown();
-                    }
-                }
-                else {
-                    //已经是最新
-                    mainWin.showErrorMessage("本地资源文件已经是最新版", boxTitle,MessageBoxImage.Information);
-                }
+                await updateService.updateAsync(btn,DirectoryHelper.getXmlResourcePath(), DirectoryHelper.getXmlResourcePath(true));
+                
             }
             catch (Exception e1)
             {

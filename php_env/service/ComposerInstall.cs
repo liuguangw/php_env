@@ -90,21 +90,23 @@ namespace php_env.service
                         this.setting.composerProgressBar.Value = processed;
                         this.setting.composerProgressBar.Maximum = total;
                     });
-                });
-                this.setting.Dispatcher.Invoke(() =>
+                }, () =>
                 {
-                    this.setting.composerProgressBar.IsIndeterminate = true;
+                    this.setting.Dispatcher.Invoke(() =>
+                    {
+                        this.setting.composerProgressBar.IsIndeterminate = true;
+                    });
+                    //生成批处理文件
+                    File.WriteAllText(appPath + @"\composer.bat", "@php \"%~dp0composer.phar\" %*", System.Text.Encoding.Default);
+                    //判断Path环境变量中是否有当前目录
+                    List<string> pathList = PathEnvironment.getPathList(EnvironmentVariableTarget.Machine);
+                    pathList.AddRange(PathEnvironment.getPathList(EnvironmentVariableTarget.User));
+                    if (!pathList.Contains(appPath))
+                    {
+                        userPathList.Add(appPath);
+                        PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
+                    }
                 });
-                //生成批处理文件
-                File.WriteAllText(appPath + @"\composer.bat", "@php \"%~dp0composer.phar\" %*", System.Text.Encoding.Default);
-                //判断Path环境变量中是否有当前目录
-                List<string> pathList = PathEnvironment.getPathList(EnvironmentVariableTarget.Machine);
-                pathList.AddRange(PathEnvironment.getPathList(EnvironmentVariableTarget.User));
-                if (!pathList.Contains(appPath))
-                {
-                    userPathList.Add(appPath);
-                    PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
-                }
                 //
             });
         }
