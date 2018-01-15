@@ -124,8 +124,6 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <None Include="data\default_config\nginx\nginx.conf" />
-    <None Include="data\default_config\nginx\vhost\localhost.conf" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -136,18 +134,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="data\resource.xml" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="favicon.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="data\websites\localhost\public_html\index.php" />
     <Resource Include="icons\info.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="icons\setting.png" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
