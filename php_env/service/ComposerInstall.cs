@@ -122,7 +122,7 @@ namespace php_env.service
                     myProcess.StartInfo.RedirectStandardOutput = true;
                     myProcess.StartInfo.WorkingDirectory = appPath;
                     myProcess.StartInfo.FileName = "php.exe";
-                    myProcess.StartInfo.Arguments = "composer.phar -v";
+                    myProcess.StartInfo.Arguments = "composer.phar -V";
                     myProcess.StartInfo.CreateNoWindow = true;
                     myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
                     myProcess.Start();

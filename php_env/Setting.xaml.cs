@@ -195,14 +195,9 @@ namespace php_env
                     this.phpSelector.IsEnabled = true;
                     this.composerProgressBar.IsIndeterminate = true;
                     this.composerProgressBar.Visibility = Visibility.Hidden;
-                    //composer -v
+                    //composer -V
                     string composerInfo = await installService.getComposerInfoAsync(appPath);
-                    //
-                    ComposerDialog dialog = new ComposerDialog();
-                    dialog.Owner = this;
-                    dialog.content.Text = composerInfo;
-                    dialog.ShowDialog();
-                    //mainWin.showErrorMessage("composer安装成功", boxTitle, MessageBoxImage.Information);
+                    mainWin.showErrorMessage("--composer版本信息如下--\r\n"+composerInfo, "composer安装成功", MessageBoxImage.Information);
                 }
                 catch (Exception e1)
                 {
