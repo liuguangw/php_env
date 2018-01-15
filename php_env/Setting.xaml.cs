@@ -214,8 +214,14 @@ namespace php_env
                     this.phpSelector.IsEnabled = true;
                     this.composerProgressBar.IsIndeterminate = true;
                     this.composerProgressBar.Visibility = Visibility.Hidden;
+                    //composer -v
+                    string composerInfo = await installService.getComposerInfoAsync(appPath);
                     //
-                    mainWin.showErrorMessage("composer安装成功", boxTitle, MessageBoxImage.Information);
+                    ComposerDialog dialog = new ComposerDialog();
+                    dialog.Owner = this;
+                    dialog.content.Text = composerInfo;
+                    dialog.ShowDialog();
+                    //mainWin.showErrorMessage("composer安装成功", boxTitle, MessageBoxImage.Information);
                 }
                 catch (Exception e1)
                 {
@@ -237,7 +243,7 @@ namespace php_env
         /// <param name="e"></param>
         private void viewAction(object sender, RoutedEventArgs e)
         {
-            AppItem appItem = ((System.Windows.Controls.Button)sender).DataContext as AppItem;
+            AppItem appItem = ((Button)sender).DataContext as AppItem;
             MainWindow mainWin = this.Owner as MainWindow;
             Process.Start(@"explorer.exe", appItem.getAppPath());
         }
@@ -249,7 +255,7 @@ namespace php_env
         /// <param name="e"></param>
         private void vcHyperlinkColumn_Click(object sender, RoutedEventArgs e)
         {
-            AppItem appItem = ((System.Windows.Controls.TextBlock)sender).DataContext as AppItem;
+            AppItem appItem = ((TextBlock)sender).DataContext as AppItem;
             Process.Start(appItem.downloadUrl);
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using php_env.items;
@@ -105,6 +106,29 @@ namespace php_env.service
                     PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
                 }
                 //
+            });
+        }
+
+        public Task<string> getComposerInfoAsync(string appPath)
+        {
+            return Task<string>.Run(() =>
+            {
+                string result = "";
+                using (Process myProcess = new Process())
+                {
+                    myProcess.StartInfo.UseShellExecute = false;
+                    myProcess.StartInfo.RedirectStandardOutput = true;
+                    myProcess.StartInfo.WorkingDirectory = appPath;
+                    myProcess.StartInfo.FileName = "php.exe";
+                    myProcess.StartInfo.Arguments = "composer.phar -v";
+                    myProcess.StartInfo.CreateNoWindow = true;
+                    myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
+                    myProcess.Start();
+                    StreamReader reader = myProcess.StandardOutput;
+                    result = reader.ReadToEnd();
+                    myProcess.WaitForExit();
+                }
+                return result;
             });
         }
     }

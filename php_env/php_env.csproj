@@ -67,6 +67,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ComposerDialog.xaml.cs">
+      <DependentUpon>ComposerDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="items\AppItem.cs" />
     <Compile Include="items\AppItemStatus.cs" />
     <Compile Include="items\AppType.cs" />
@@ -82,6 +85,10 @@
     <Compile Include="Setting.xaml.cs">
       <DependentUpon>Setting.xaml</DependentUpon>
     </Compile>
+    <Page Include="ComposerDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -136,6 +143,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="data\websites\localhost\public_html\index.php" />
+    <Resource Include="icons\info.png" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="icons\setting.png" />
