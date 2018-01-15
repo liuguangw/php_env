@@ -16,6 +16,10 @@ namespace php_env
         {
             e.Handled = true;
             MessageBox.Show(e.Exception.Message, "出错了", MessageBoxButton.OK, MessageBoxImage.Error);
+            //退出程序
+            MainWindow mainWin = this.MainWindow as MainWindow;
+            mainWin.isWinAppRestart = true;
+            this.Shutdown();
         }
     }
 }

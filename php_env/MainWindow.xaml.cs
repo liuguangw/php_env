@@ -51,6 +51,7 @@ namespace php_env
             catch (Exception e1)
             {
                 this.showErrorMessage(e1.Message, "加载xml资源文件失败");
+                return;
             }
             //已安装下拉列表默认选择第一项
             this.installedPhpList.CollectionChanged += InstalledPhpList_CollectionChanged;
