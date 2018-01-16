@@ -129,6 +129,18 @@
   <ItemGroup>
     <Resource Include="favicon.ico" />
     <Resource Include="icons\setting.png" />
+    <None Include="data\resource.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="data\default_config\nginx\nginx.conf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="data\default_config\nginx\vhost\localhost.conf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="data\websites\localhost\public_html\index.php">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
