@@ -74,10 +74,12 @@ namespace php_env.service
                 }
                 //获取url
                 string composerUrl = null;
+                string composerMirrorUrl = null;
                 this.setting.Dispatcher.Invoke(() =>
                 {
                     MainWindow mainWin = this.setting.Owner as MainWindow;
                     composerUrl = mainWin.xmlResource.composerUrl;
+                    composerMirrorUrl = mainWin.xmlResource.composerMirror;
                 });
                 //下载
                 string savePath = appPath + @"\composer.phar";
@@ -96,23 +98,38 @@ namespace php_env.service
                     {
                         this.setting.composerProgressBar.IsIndeterminate = true;
                     });
-                    //生成批处理文件
-                    File.WriteAllText(appPath + @"\composer.bat", "@php \"%~dp0composer.phar\" %*", System.Text.Encoding.Default);
-                    //判断Path环境变量中是否有当前目录
-                    List<string> pathList = PathEnvironment.getPathList(EnvironmentVariableTarget.Machine);
-                    pathList.AddRange(PathEnvironment.getPathList(EnvironmentVariableTarget.User));
-                    if (!pathList.Contains(appPath))
+
+                    Task t1 = Task.Run(() =>
                     {
-                        userPathList.Add(appPath);
-                        PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
+                        //生成批处理文件
+                        File.WriteAllText(appPath + @"\composer.bat", "@php \"%~dp0composer.phar\" %*", System.Text.Encoding.Default);
+                        //判断Path环境变量中是否有当前目录
+                        List<string> pathList = PathEnvironment.getPathList(EnvironmentVariableTarget.Machine);
+                        pathList.AddRange(PathEnvironment.getPathList(EnvironmentVariableTarget.User));
+                        if (!pathList.Contains(appPath))
+                        {
+                            userPathList.Add(appPath);
+                            PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
+                        }
+                    });
+                    //设置全局镜像
+                    if (composerMirrorUrl != "")
+                    {
+                        Task t2 = this.setComposerMirrorAsync(appPath, composerMirrorUrl);
+                        Task.WaitAll(t1, t2);
                     }
+                    else
+                    {
+                        t1.Wait();
+                    }
+                    //
                 });
-                //
             });
         }
 
-        public Task<string> getComposerInfoAsync(string appPath)
+        private Task<string> runComposerCommand(string appPath, string command)
         {
+
             return Task<string>.Run(() =>
             {
                 string result = "";
@@ -122,7 +139,7 @@ namespace php_env.service
                     myProcess.StartInfo.RedirectStandardOutput = true;
                     myProcess.StartInfo.WorkingDirectory = appPath;
                     myProcess.StartInfo.FileName = "php.exe";
-                    myProcess.StartInfo.Arguments = "composer.phar -V";
+                    myProcess.StartInfo.Arguments = "composer.phar " + command;
                     myProcess.StartInfo.CreateNoWindow = true;
                     myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
                     myProcess.Start();
@@ -132,6 +149,16 @@ namespace php_env.service
                 }
                 return result;
             });
+        }
+
+        private Task setComposerMirrorAsync(string appPath, string composerMirrorUrl)
+        {
+            return this.runComposerCommand(appPath, @"config -g repo.packagist composer " + composerMirrorUrl);
+        }
+
+        public Task<string> getComposerInfoAsync(string appPath)
+        {
+            return this.runComposerCommand(appPath, "-V");
         }
     }
 }

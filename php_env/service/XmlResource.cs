@@ -28,6 +28,11 @@ namespace php_env.service
         public string composerUrl = "";
 
         /// <summary>
+        /// packagist镜像地址
+        /// </summary>
+        public string composerMirror = "";
+
+        /// <summary>
         /// xml文件路径
         /// </summary>
         /// <param name="xmlPath"></param>
@@ -76,6 +81,11 @@ namespace php_env.service
             //composer配置初始化
             XmlElement composer = doc.DocumentElement["composer"];
             this.composerUrl = composer.InnerText;
+            string mirrorUrl = composer.GetAttribute("mirror");
+            if (mirrorUrl != null)
+            {
+                this.composerMirror = mirrorUrl;
+            }
         }
     }
 }

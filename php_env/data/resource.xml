@@ -12,7 +12,7 @@
     <item>pdo_pgsql</item>
   </php_extension>
   <!--composer-->
-  <composer>https://dl.laravel-china.org/composer.phar</composer>
+  <composer mirror="https://packagist.laravel-china.org">https://dl.laravel-china.org/composer.phar</composer>
   <!--php版本列表-->
   <php upload_max_filesize="20M">
     <item version="7.2.1" vc="15">http://windows.php.net/downloads/releases/php-7.2.1-nts-Win32-VC15-x64.zip</item>
