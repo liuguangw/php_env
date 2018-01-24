@@ -27,125 +27,113 @@ namespace php_env.service
                     string zipTmpPath = appItem.getAppZipPath(true);
                     await this.downloadAppAsync(appItem, zipPath, zipTmpPath, continueInstall);
                 }
-                else {
-                    await this.continueInstall(appItem);
+                else
+                {
+                    this.continueInstall(appItem);
                 }
             });
         }
 
-        private Task continueInstall(AppItem appItem)
+        private void continueInstall(AppItem appItem)
         {
-
-            return Task.Run(async () =>
+            //创建目录
+            string appPath = appItem.getAppPath();
+            DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
+            if (!appPathInfo.Exists)
             {
-                //创建目录
-                string appPath = appItem.getAppPath();
-                DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
-                if (!appPathInfo.Exists)
-                {
-                    appPathInfo.Create();
-                }
-                //解压
-                string zipPath = appItem.getAppZipPath();
-                System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, appPath);
-                //执行后续步骤
-                if (appItem.type == AppType.PHP)
-                {
-                    await this.installPhpAsync(appItem);
-                }
-                else if (appItem.type == AppType.NGINX)
-                {
-                    await this.installNginxAsync(appItem);
-                }
-            });
+                appPathInfo.Create();
+            }
+            //解压
+            string zipPath = appItem.getAppZipPath();
+            System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, appPath);
+            //执行后续步骤
+            if (appItem.type == AppType.PHP)
+            {
+                this.installPhp(appItem);
+            }
+            else if (appItem.type == AppType.NGINX)
+            {
+                this.installNginx(appItem);
+            }
         }
 
-        private Task downloadAppAsync(AppItem appItem, string zipPath, string zipTmpPath, Func<AppItem,Task> onDownloadSuccess)
+        private Task downloadAppAsync(AppItem appItem, string zipPath, string zipTmpPath, Action<AppItem> onDownloadSuccess)
         {
-            return Task.Run(async () =>
+            DownloadHelper downloadHelper = new DownloadHelper();
+            return downloadHelper.downloadFileAsync(new Uri(appItem.downloadUrl), zipTmpPath, (string progressPercentage) =>
             {
-                DownloadHelper downloadHelper = new DownloadHelper();
-                await downloadHelper.downloadFileAsync(new Uri(appItem.downloadUrl), zipTmpPath, (string progressPercentage) =>
-                {
-                    this.setting.Dispatcher.Invoke(() =>
-                    {
-                        appItem.progressPercentage = progressPercentage;
-                    });
-                }, async () =>
-                {
-                    this.setting.Dispatcher.Invoke(() =>
-                    {
-                        appItem.progressPercentage = "";
-                    });
-                    //copy文件
-                    FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
-                    zipTmpPathInfo.CopyTo(zipPath, true);
-                    //删除临时文件
-                    zipTmpPathInfo.Delete();
-                    //继续执行
-                    await onDownloadSuccess.Invoke(appItem);
-                });
-            });
-        }
-
-        private Task installPhpAsync(AppItem appItem)
-        {
-            return Task.Run(() =>
-            {
-                string appPath = appItem.getAppPath();
-                DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
-                //复制php.ini
-                FileInfo phpIniFile = new FileInfo(appPath + @"\php.ini-development");
-                string configPath = appPath + @"\php.ini";
-                if (phpIniFile.Exists)
-                {
-                    phpIniFile.CopyTo(configPath, true);
-                }
-                //处理php.ini
-                UTF8Encoding encoding = new UTF8Encoding();
-                string fileContent = File.ReadAllText(configPath, encoding);
-                XmlResource xmlResource = null;
                 this.setting.Dispatcher.Invoke(() =>
                 {
-                    MainWindow mainWin = this.setting.Owner as MainWindow;
-                    xmlResource = mainWin.xmlResource;
+                    appItem.progressPercentage = progressPercentage;
                 });
-                //基本配置替换
-                fileContent = fileContent.Replace(";cgi.fix_pathinfo=1", "cgi.fix_pathinfo=0")
-                .Replace("; extension_dir = \"ext\"", "extension_dir = \"ext\"")
-                .Replace("upload_max_filesize = 2M", "upload_max_filesize = " + xmlResource.phpUploadMaxFilesize);
-                //扩展
-                foreach (string extName in xmlResource.phpExtensions)
+            }, () =>
+            {
+                this.setting.Dispatcher.Invoke(() =>
                 {
-                    fileContent = fileContent.Replace(";extension=php_" + extName, "extension=php_" + extName);//老版本
-                    fileContent = fileContent.Replace(";extension=" + extName, "extension=" + extName);//新版本
-                }
-                File.WriteAllText(configPath, fileContent, encoding);
+                    appItem.progressPercentage = "";
+                });
+                //copy文件
+                FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
+                zipTmpPathInfo.CopyTo(zipPath, true);
+                //删除临时文件
+                zipTmpPathInfo.Delete();
+                //继续执行
+                onDownloadSuccess.Invoke(appItem);
             });
         }
 
-        private Task installNginxAsync(AppItem appItem)
+        private void installPhp(AppItem appItem)
         {
-            return Task.Run(async () =>
+            string appPath = appItem.getAppPath();
+            DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
+            //复制php.ini
+            FileInfo phpIniFile = new FileInfo(appPath + @"\php.ini-development");
+            string configPath = appPath + @"\php.ini";
+            if (phpIniFile.Exists)
             {
-                string appPath = appItem.getAppPath();
-                DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
-                //从目录中移动到当前目录
-                DirectoryInfo[] subDirs = appPathInfo.GetDirectories();
-                await this.copyFiles(subDirs[0], appPathInfo);
-                //删除目录
-                subDirs[0].Delete(true);
-                //复制默认配置文件
-                DirectoryInfo defaultConfigPath = new DirectoryInfo(DirectoryHelper.getNginxDefaultConfigPath());
-                await this.copyFiles(defaultConfigPath, new DirectoryInfo(appPath + @"\conf"));
-                //修改默认网站路径
-                string defaultWebsitePath = DirectoryHelper.getDefaultWebsitePath();
-                string configPath = appPath + @"\conf\vhost\localhost.conf";
-                UTF8Encoding encoding = new UTF8Encoding();
-                string fileContent = File.ReadAllText(configPath, encoding);
-                fileContent = fileContent.Replace("{{path}}", defaultWebsitePath.Replace("\\", "/"));
-                File.WriteAllText(configPath, fileContent, encoding);
+                phpIniFile.CopyTo(configPath, true);
+            }
+            //处理php.ini
+            UTF8Encoding encoding = new UTF8Encoding();
+            string fileContent = File.ReadAllText(configPath, encoding);
+            XmlResource xmlResource = null;
+            this.setting.Dispatcher.Invoke(() =>
+            {
+                MainWindow mainWin = this.setting.Owner as MainWindow;
+                xmlResource = mainWin.xmlResource;
             });
+            //基本配置替换
+            fileContent = fileContent.Replace(";cgi.fix_pathinfo=1", "cgi.fix_pathinfo=0")
+            .Replace("; extension_dir = \"ext\"", "extension_dir = \"ext\"")
+            .Replace("upload_max_filesize = 2M", "upload_max_filesize = " + xmlResource.phpUploadMaxFilesize);
+            //扩展
+            foreach (string extName in xmlResource.phpExtensions)
+            {
+                fileContent = fileContent.Replace(";extension=php_" + extName, "extension=php_" + extName);//老版本
+                fileContent = fileContent.Replace(";extension=" + extName, "extension=" + extName);//新版本
+            }
+            File.WriteAllText(configPath, fileContent, encoding);
+        }
+
+        private void installNginx(AppItem appItem)
+        {
+            string appPath = appItem.getAppPath();
+            DirectoryInfo appPathInfo = new DirectoryInfo(appPath);
+            //从目录中移动到当前目录
+            DirectoryInfo[] subDirs = appPathInfo.GetDirectories();
+            this.copyFiles(subDirs[0], appPathInfo);
+            //删除目录
+            subDirs[0].Delete(true);
+            //复制默认配置文件
+            DirectoryInfo defaultConfigPath = new DirectoryInfo(DirectoryHelper.getNginxDefaultConfigPath());
+            this.copyFiles(defaultConfigPath, new DirectoryInfo(appPath + @"\conf"));
+            //修改默认网站路径
+            string defaultWebsitePath = DirectoryHelper.getDefaultWebsitePath();
+            string configPath = appPath + @"\conf\vhost\localhost.conf";
+            UTF8Encoding encoding = new UTF8Encoding();
+            string fileContent = File.ReadAllText(configPath, encoding);
+            fileContent = fileContent.Replace("{{path}}", defaultWebsitePath.Replace("\\", "/"));
+            File.WriteAllText(configPath, fileContent, encoding);
         }
 
         /// <summary>
@@ -154,27 +142,24 @@ namespace php_env.service
         /// <param name="srcPath">源文件夹目录</param>
         /// <param name="distPath">目标文件夹目录</param>
         /// <returns></returns>
-        private Task copyFiles(DirectoryInfo srcPath, DirectoryInfo distPath)
+        private void copyFiles(DirectoryInfo srcPath, DirectoryInfo distPath)
         {
-            return Task.Run(async () =>
+            if (!distPath.Exists)
             {
-                if (!distPath.Exists)
-                {
-                    distPath.Create();
-                }
-                //复制文件
-                FileInfo[] files = srcPath.GetFiles();
-                foreach (FileInfo tmpFile in files)
-                {
-                    tmpFile.CopyTo(distPath.FullName + @"\" + tmpFile.Name, true);
-                }
-                //复制目录
-                DirectoryInfo[] dirs = srcPath.GetDirectories();
-                foreach (DirectoryInfo tmpDir in dirs)
-                {
-                    await this.copyFiles(tmpDir, new DirectoryInfo(distPath.FullName + @"\" + tmpDir.Name));
-                }
-            });
+                distPath.Create();
+            }
+            //复制文件
+            FileInfo[] files = srcPath.GetFiles();
+            foreach (FileInfo tmpFile in files)
+            {
+                tmpFile.CopyTo(distPath.FullName + @"\" + tmpFile.Name, true);
+            }
+            //复制目录
+            DirectoryInfo[] dirs = srcPath.GetDirectories();
+            foreach (DirectoryInfo tmpDir in dirs)
+            {
+                this.copyFiles(tmpDir, new DirectoryInfo(distPath.FullName + @"\" + tmpDir.Name));
+            }
         }
     }
 }

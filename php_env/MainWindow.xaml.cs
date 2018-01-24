@@ -175,6 +175,7 @@ namespace php_env
             //重启操作时不提示
             if (this.isWinAppRestart)
             {
+                await this.closeAllApp();
                 return;
             }
             if ((!this.appServerItem.canSelectPhp) || (!this.appServerItem.canSelectNginx))
