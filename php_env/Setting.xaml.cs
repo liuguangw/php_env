@@ -141,7 +141,7 @@ namespace php_env
                 if (hasUpdate)
                 {
                     //更新成功
-                    if (MessageBox.Show("更新资源文件成功,重启本程序生效,确定要重启程序吗", "", MessageBoxButton.YesNoCancel, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    if (MessageBox.Show("更新资源文件成功,重启本程序生效,确定要重启程序吗", boxTitle, MessageBoxButton.YesNoCancel, MessageBoxImage.Question) == MessageBoxResult.Yes)
                     {
                         //重启应用
                         await mainWin.closeAllApp();
@@ -153,7 +153,7 @@ namespace php_env
                 else
                 {
                     //已经是最新
-                    mainWin.showErrorMessage("本地资源文件已经是最新版", "资源更新", MessageBoxImage.Information);
+                    mainWin.showErrorMessage("本地资源文件已经是最新版", boxTitle, MessageBoxImage.Information);
                 }
             }
             catch (Exception e1)
