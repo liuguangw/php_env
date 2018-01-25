@@ -24,13 +24,32 @@ namespace php_env.service
                 //如果压缩包不存在,则进行在线下载
                 if (!zipPathInfo.Exists)
                 {
+                    //下载
                     string zipTmpPath = appItem.getAppZipPath(true);
-                    await this.downloadAppAsync(appItem, zipPath, zipTmpPath, continueInstall);
+                    await this.downloadAppAsync(appItem, zipTmpPath);
+                    this.setting.Dispatcher.Invoke(() =>
+                    {
+                        appItem.progressPercentage = "";
+                    });
+                    //copy文件
+                    FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
+                    zipTmpPathInfo.CopyTo(zipPath, true);
+                    //删除临时文件
+                    zipTmpPathInfo.Delete();
                 }
-                else
+                this.continueInstall(appItem);
+            });
+        }
+
+        private Task downloadAppAsync(AppItem appItem, string zipTmpPath)
+        {
+            DownloadHelper downloadHelper = new DownloadHelper();
+            return downloadHelper.downloadFileAsync(new Uri(appItem.downloadUrl), zipTmpPath, (string progressPercentage) =>
+            {
+                this.setting.Dispatcher.Invoke(() =>
                 {
-                    this.continueInstall(appItem);
-                }
+                    appItem.progressPercentage = progressPercentage;
+                });
             });
         }
 
@@ -55,31 +74,6 @@ namespace php_env.service
             {
                 this.installNginx(appItem);
             }
-        }
-
-        private Task downloadAppAsync(AppItem appItem, string zipPath, string zipTmpPath, Action<AppItem> onDownloadSuccess)
-        {
-            DownloadHelper downloadHelper = new DownloadHelper();
-            return downloadHelper.downloadFileAsync(new Uri(appItem.downloadUrl), zipTmpPath, (string progressPercentage) =>
-            {
-                this.setting.Dispatcher.Invoke(() =>
-                {
-                    appItem.progressPercentage = progressPercentage;
-                });
-            }, () =>
-            {
-                this.setting.Dispatcher.Invoke(() =>
-                {
-                    appItem.progressPercentage = "";
-                });
-                //copy文件
-                FileInfo zipTmpPathInfo = new FileInfo(zipTmpPath);
-                zipTmpPathInfo.CopyTo(zipPath, true);
-                //删除临时文件
-                zipTmpPathInfo.Delete();
-                //继续执行
-                onDownloadSuccess.Invoke(appItem);
-            });
         }
 
         private void installPhp(AppItem appItem)

@@ -133,8 +133,28 @@ namespace php_env
             try
             {
                 ResourceUpdate updateService = new ResourceUpdate(this);
-                await updateService.updateAsync(btn,DirectoryHelper.getXmlResourcePath(), DirectoryHelper.getXmlResourcePath(true));
-                
+                bool hasUpdate = await updateService.updateAsync(DirectoryHelper.getXmlResourcePath(), DirectoryHelper.getXmlResourcePath(true));
+                //状态还原
+                btn.IsEnabled = true;
+                this.updateProgressBar.IsIndeterminate = true;
+                this.updateProgressBar.Visibility = Visibility.Hidden;
+                if (hasUpdate)
+                {
+                    //更新成功
+                    if (MessageBox.Show("更新资源文件成功,重启本程序生效,确定要重启程序吗", "", MessageBoxButton.YesNoCancel, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    {
+                        //重启应用
+                        await mainWin.closeAllApp();
+                        mainWin.isWinAppRestart = true;
+                        Process.Start(Process.GetCurrentProcess().MainModule.FileName);
+                        Application.Current.Shutdown();
+                    }
+                }
+                else
+                {
+                    //已经是最新
+                    mainWin.showErrorMessage("本地资源文件已经是最新版", "资源更新", MessageBoxImage.Information);
+                }
             }
             catch (Exception e1)
             {
@@ -197,7 +217,7 @@ namespace php_env
                     this.composerProgressBar.Visibility = Visibility.Hidden;
                     //composer -V
                     string composerInfo = await installService.getComposerInfoAsync(appPath);
-                    mainWin.showErrorMessage("--composer版本信息如下--\r\n"+composerInfo, "composer安装成功", MessageBoxImage.Information);
+                    mainWin.showErrorMessage("--composer版本信息如下--\r\n" + composerInfo, "composer安装成功", MessageBoxImage.Information);
                 }
                 catch (Exception e1)
                 {

@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
 
 namespace php_env.service
 {
@@ -17,9 +14,9 @@ namespace php_env.service
             this.setting = setting;
         }
 
-        public Task updateAsync(Button updateBtn,string xmlResourcePath, string xmlResourceTmpPath)
+        public Task<bool> updateAsync(string xmlResourcePath, string xmlResourceTmpPath)
         {
-            return Task.Run(async () =>
+            return Task<bool>.Run(async () =>
             {
                 string updateUrl = @"https://github.com/liuguangw/php_env/raw/master/php_env/data/resource.xml";
                 //下载
@@ -32,56 +29,31 @@ namespace php_env.service
                         this.setting.updateProgressBar.Value = processed;
                         this.setting.updateProgressBar.Maximum = total;
                     });
-                }, () => { this.continueUpdate(updateBtn,xmlResourcePath, xmlResourceTmpPath); });
+                });
+                this.setting.Dispatcher.Invoke(() =>
+                {
+                    this.setting.composerProgressBar.IsIndeterminate = true;
+                });
+                //获取两者的md5
+                string[] md5Result = await this.compareMd5Async(xmlResourcePath, xmlResourceTmpPath);
+                bool needUpdate = (md5Result[0] != md5Result[1]);
+                FileInfo tmpFileInfo = new FileInfo(xmlResourceTmpPath);
+                if (needUpdate)
+                {
+                    tmpFileInfo.CopyTo(xmlResourcePath, true);
+                }
+                tmpFileInfo.Delete();
+                return needUpdate;
             });
         }
 
-        private async void continueUpdate(Button updateBtn, string xmlResourcePath, string xmlResourceTmpPath)
+        private Task<string[]> compareMd5Async(string xmlResourcePath, string xmlResourceTmpPath)
         {
 
-            this.setting.Dispatcher.Invoke(() =>
-            {
-                this.setting.composerProgressBar.IsIndeterminate = true;
-            });
             //获取md5
             Task<string> t1 = this.getFileMd5Async(xmlResourcePath);
             Task<string> t2 = this.getFileMd5Async(xmlResourceTmpPath);
-            string[] result = await Task<string>.WhenAll(t1, t2);
-            bool needUpdate = (result[0] != result[1]);
-            FileInfo tmpFileInfo = new FileInfo(xmlResourceTmpPath);
-            if (needUpdate)
-            {
-                tmpFileInfo.CopyTo(xmlResourcePath, true);
-            }
-            tmpFileInfo.Delete();
-            this.setting.Dispatcher.Invoke(()=> {
-                this.afterUpdate(needUpdate,updateBtn);
-            });
-        }
-
-        private async void afterUpdate(bool hasUpdate, Button updateBtn) {
-            MainWindow mainWin = this.setting.Owner as MainWindow;
-            //状态还原
-            updateBtn.IsEnabled = true;
-            this.setting.updateProgressBar.IsIndeterminate = true;
-            this.setting.updateProgressBar.Visibility = Visibility.Hidden;
-            if (hasUpdate)
-            {
-                //更新成功
-                if (MessageBox.Show("更新资源文件成功,重启本程序生效,确定要重启程序吗", "", MessageBoxButton.YesNoCancel, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                {
-                    //重启应用
-                    await mainWin.closeAllApp();
-                    mainWin.isWinAppRestart = true;
-                    Process.Start(Process.GetCurrentProcess().MainModule.FileName);
-                    Application.Current.Shutdown();
-                }
-            }
-            else
-            {
-                //已经是最新
-                mainWin.showErrorMessage("本地资源文件已经是最新版", "资源更新", MessageBoxImage.Information);
-            }
+            return Task<string>.WhenAll(t1, t2);
         }
 
         private Task<string> getFileMd5Async(string fileName)

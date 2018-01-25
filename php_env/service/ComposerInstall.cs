@@ -91,39 +91,42 @@ namespace php_env.service
                         this.setting.composerProgressBar.Value = processed;
                         this.setting.composerProgressBar.Maximum = total;
                     });
-                }, () =>
-                {
-                    this.setting.Dispatcher.Invoke(() =>
-                    {
-                        this.setting.composerProgressBar.IsIndeterminate = true;
-                    });
-
-                    Task t1 = Task.Run(() =>
-                    {
-                        //生成批处理文件
-                        File.WriteAllText(appPath + @"\composer.bat", "@php \"%~dp0composer.phar\" %*", System.Text.Encoding.Default);
-                        //判断Path环境变量中是否有当前目录
-                        List<string> pathList = PathEnvironment.getPathList(EnvironmentVariableTarget.Machine);
-                        pathList.AddRange(PathEnvironment.getPathList(EnvironmentVariableTarget.User));
-                        if (!pathList.Contains(appPath))
-                        {
-                            userPathList.Add(appPath);
-                            PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
-                        }
-                    });
-                    //设置全局镜像
-                    if (composerMirrorUrl != "")
-                    {
-                        Task t2 = this.setComposerMirrorAsync(appPath, composerMirrorUrl);
-                        Task.WaitAll(t1, t2);
-                    }
-                    else
-                    {
-                        t1.Wait();
-                    }
-                    //
                 });
+                this.setting.Dispatcher.Invoke(() =>
+                {
+                    this.setting.composerProgressBar.IsIndeterminate = true;
+                });
+                //初始化
+                await this.initComposer(appPath,composerMirrorUrl, userPathList);
             });
+        }
+
+        private Task initComposer(string appPath,string composerMirrorUrl, List<string> userPathList)
+        {
+
+            Task t1 = Task.Run(() =>
+            {
+                //生成批处理文件
+                File.WriteAllText(appPath + @"\composer.bat", "@php \"%~dp0composer.phar\" %*", System.Text.Encoding.Default);
+                //判断Path环境变量中是否有当前目录
+                List<string> pathList = PathEnvironment.getPathList(EnvironmentVariableTarget.Machine);
+                pathList.AddRange(PathEnvironment.getPathList(EnvironmentVariableTarget.User));
+                if (!pathList.Contains(appPath))
+                {
+                    userPathList.Add(appPath);
+                    PathEnvironment.setPathList(userPathList, EnvironmentVariableTarget.User);
+                }
+            });
+            //设置全局镜像
+            if (composerMirrorUrl != "")
+            {
+                Task t2 = this.setComposerMirrorAsync(appPath, composerMirrorUrl);
+                return Task.WhenAll(t1, t2);
+            }
+            else
+            {
+                return t1;
+            }
         }
 
         private Task<string> runComposerCommand(string appPath, string command)
