@@ -97,11 +97,11 @@ namespace php_env.service
                     this.setting.composerProgressBar.IsIndeterminate = true;
                 });
                 //初始化
-                await this.initComposer(appPath,composerMirrorUrl, userPathList);
+                await this.initComposer(appPath, composerMirrorUrl, userPathList);
             });
         }
 
-        private Task initComposer(string appPath,string composerMirrorUrl, List<string> userPathList)
+        private Task initComposer(string appPath, string composerMirrorUrl, List<string> userPathList)
         {
 
             Task t1 = Task.Run(() =>

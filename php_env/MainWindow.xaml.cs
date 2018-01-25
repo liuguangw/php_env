@@ -34,8 +34,7 @@ namespace php_env
         {
 
             //初始化应用状态
-            this.appServerItem = new AppServerItem();
-            this.Resources["appServerItem"] = this.appServerItem;
+            this.Resources["appServerItem"] = this.appServerItem = new AppServerItem();
             InitializeComponent();
             //初始化下拉列表资源
             this.phpSelector.DataContext = this.installedPhpList = new ObservableCollection<AppItem>();

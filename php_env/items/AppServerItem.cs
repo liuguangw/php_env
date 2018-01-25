@@ -142,21 +142,18 @@ namespace php_env.items
             {
                 appItem = this._nginxItem;
             }
-            return Task.Run(async () =>
+            if (appItem == null)
             {
-                if (appItem == null)
-                {
-                    throw new Exception("请先安装" + Enum.GetName(typeof(AppType), appType).ToLower());
-                }
-                if (!appItem.isRunning)
-                {
-                    await this.runAppItem(appItem);
-                }
-                else
-                {
-                    await this.stopAppItem(appItem);
-                }
-            });
+                throw new Exception("请先安装" + Enum.GetName(typeof(AppType), appType).ToLower());
+            }
+            if (!appItem.isRunning)
+            {
+                return this.runAppItem(appItem);
+            }
+            else
+            {
+                return this.stopAppItem(appItem);
+            }
         }
 
         public Task stopAppItem(AppType appType)

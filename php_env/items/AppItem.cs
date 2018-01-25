@@ -145,6 +145,10 @@ namespace php_env.items
                         break;
                     case AppItemStatus.UNDER_INSTALL:
                         text = "正在安装";
+                        if (this.progressPercentage != "")
+                        {
+                            text += ("(" + this.progressPercentage + "%)");
+                        }
                         break;
                     case AppItemStatus.INSTALLED:
                         text = "已安装";
@@ -155,10 +159,6 @@ namespace php_env.items
                     case AppItemStatus.UNDER_UNISTALL:
                         text = "卸载中";
                         break;
-                }
-                if (this.progressPercentage != "")
-                {
-                    text += ("(" + this.progressPercentage + "%)");
                 }
                 return text;
             }
