@@ -34,7 +34,7 @@ namespace php_env
         {
 
             //初始化应用状态
-            this.Resources["appServerItem"] = this.appServerItem = new AppServerItem();
+            this.Resources["appServerItem"] = this.appServerItem = new AppServerItem(this);
             InitializeComponent();
             //初始化下拉列表资源
             this.phpSelector.DataContext = this.installedPhpList = new ObservableCollection<AppItem>();
@@ -234,7 +234,7 @@ namespace php_env
         {
             this.Dispatcher.Invoke(() =>
             {
-                MessageBox.Show(message, title, MessageBoxButton.OK, image);
+                MessageBox.Show(this, message, title, MessageBoxButton.OK, image);
             });
         }
 

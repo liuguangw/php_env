@@ -70,11 +70,22 @@ namespace php_env.items
                 }
             }
         }
+        //0=>php 1=>nginx
 
         /// <summary>
-        /// 当前运行的php进程
+        /// 进程对象数组
         /// </summary>
-        private Process phpItemProcess = null;
+        private Process[] processArr = new Process[] { null, null };
+
+        /// <summary>
+        /// 错误消息数组
+        /// </summary>
+        private string[] processError = new string[] { null, null };
+
+        /// <summary>
+        /// 是否强制结束PHP进程(用于区分异常退出)
+        /// </summary>
+        private bool forceKillPhp = false;
 
         /// <summary>
         /// 判断是否可以切换php版本
@@ -128,6 +139,13 @@ namespace php_env.items
             }
         }
 
+        private MainWindow mainWindow;
+
+        public AppServerItem(MainWindow mainWindow)
+        {
+            this.mainWindow = mainWindow;
+        }
+
         /// <summary>
         /// 点击了启动或者停止按钮时执行
         /// </summary>
@@ -162,7 +180,8 @@ namespace php_env.items
            {
                if (appType == AppType.PHP)
                {
-                   this.phpItemProcess.Kill();
+                   this.forceKillPhp = true;
+                   this.processArr[0].Kill();
                    //进程结束时,会自动更新运行状态属性
                }
                else
@@ -170,9 +189,10 @@ namespace php_env.items
                    AppItem appItem = this.nginxItem;
                    //nginx -s stop
                    Process myProcess = new Process();
-                   myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
+                   myProcess.StartInfo.CreateNoWindow = true;//隐藏
+                   myProcess.StartInfo.UseShellExecute = false;
                    myProcess.StartInfo.WorkingDirectory = appItem.getAppPath();//工作目录
-                   myProcess.StartInfo.FileName = @"nginx.exe";
+                   myProcess.StartInfo.FileName = appItem.getAppPath() + @"\nginx.exe";
                    myProcess.StartInfo.Arguments = "-s stop";
                    myProcess.Start();
                    appItem.status = AppItemStatus.INSTALLED;
@@ -188,32 +208,62 @@ namespace php_env.items
         private Task runAppItem(AppItem appItem)
         {
 
-            return Task.Run(() =>
+            return Task.Run((Action)(() =>
             {
                 Process myProcess = new Process();
-                myProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;//隐藏
                 myProcess.StartInfo.WorkingDirectory = appItem.getAppPath();//工作目录
+                myProcess.StartInfo.CreateNoWindow = true;//隐藏
+                myProcess.StartInfo.UseShellExecute = false;
+                myProcess.StartInfo.RedirectStandardError = true;
+                myProcess.EnableRaisingEvents = true;
                 if (appItem.type == AppType.PHP)
                 {
-                    myProcess.StartInfo.FileName = @"php-cgi.exe";
+                    myProcess.StartInfo.FileName = appItem.getAppPath() + @"\php-cgi.exe";
                     myProcess.StartInfo.Arguments = "-b 127.0.0.1:6757";
-                    if (this.phpItemProcess != null)
+                    if (this.processArr[0] != null)
                     {
-                        this.phpItemProcess.Exited -= phpProcess_Exited;
+                        this.processArr[0].Exited -= phpProcess_Exited;
                     }
+                    this.forceKillPhp = false;
                     //绑定退出事件
-                    myProcess.EnableRaisingEvents = true;
                     myProcess.Exited += phpProcess_Exited;
-                    this.phpItemProcess = myProcess;//附加进程对象,用于停止服务时调用
-                    myProcess.Start();
+                    myProcess.ErrorDataReceived += phpErrorHandler;
+                    this.processArr[0] = myProcess;//附加进程对象,用于停止服务时调用
+                    this.processError[0] = "";
                 }
                 else
                 {
-                    myProcess.StartInfo.FileName = @"nginx.exe";
-                    myProcess.Start();
+                    myProcess.StartInfo.FileName = appItem.getAppPath() + @"\nginx.exe";
+                    if (this.processArr[1] != null)
+                    {
+                        this.processArr[1].Exited -= nginxProcess_Exited;
+                    }
+                    //绑定退出事件
+                    myProcess.Exited += nginxProcess_Exited;
+                    myProcess.ErrorDataReceived += nginxErrorHandler;
+                    this.processArr[1] = myProcess;//附加进程对象,用于停止服务时调用
+                    this.processError[1] = "";
                 }
+                myProcess.Start();
+                myProcess.BeginErrorReadLine();
                 appItem.status = AppItemStatus.UNDER_RUNNING;
-            });
+            }));
+        }
+
+        private void phpErrorHandler(object sender, DataReceivedEventArgs errLine)
+        {
+            if (!String.IsNullOrEmpty(errLine.Data))
+            {
+                this.processError[0] += errLine.Data + "\r\n";
+            }
+        }
+
+        private void nginxErrorHandler(object sender, DataReceivedEventArgs errLine)
+        {
+            if (!String.IsNullOrEmpty(errLine.Data))
+            {
+                this.processError[1] += errLine.Data + "\r\n";
+            }
         }
 
         public Task closeAllApp()
@@ -237,6 +287,39 @@ namespace php_env.items
         private void phpProcess_Exited(object sender, EventArgs e)
         {
             this._phpItem.status = AppItemStatus.INSTALLED;
+            //异常退出
+            if ((!this.forceKillPhp) && (this.processArr[0].ExitCode != 0))
+            {
+                string title = "php异常退出";
+                string errMsg = this.processError[0].TrimEnd("\r\n".ToCharArray());
+                if (String.IsNullOrEmpty(errMsg))
+                {
+                    this.mainWindow.showErrorMessage(title);
+                }
+                else
+                {
+                    this.mainWindow.showErrorMessage(errMsg, title);
+                }
+            }
+        }
+
+        private void nginxProcess_Exited(object sender, EventArgs e)
+        {
+            this._nginxItem.status = AppItemStatus.INSTALLED;
+            //异常退出
+            if (this.processArr[1].ExitCode != 0)
+            {
+                string title = "nginx异常退出";
+                string errMsg = this.processError[1].TrimEnd("\r\n".ToCharArray());
+                if (String.IsNullOrEmpty(errMsg))
+                {
+                    this.mainWindow.showErrorMessage(title);
+                }
+                else
+                {
+                    this.mainWindow.showErrorMessage(errMsg, title);
+                }
+            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
