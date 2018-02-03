@@ -223,9 +223,10 @@ namespace php_env.items
                     if (this.processArr[0] != null)
                     {
                         this.processArr[0].Exited -= phpProcess_Exited;
+                        this.processArr[0].ErrorDataReceived -= phpErrorHandler;
                     }
                     this.forceKillPhp = false;
-                    //绑定退出事件
+                    //绑定退出事件、错误事件
                     myProcess.Exited += phpProcess_Exited;
                     myProcess.ErrorDataReceived += phpErrorHandler;
                     this.processArr[0] = myProcess;//附加进程对象,用于停止服务时调用
@@ -237,8 +238,9 @@ namespace php_env.items
                     if (this.processArr[1] != null)
                     {
                         this.processArr[1].Exited -= nginxProcess_Exited;
+                        this.processArr[1].ErrorDataReceived -= nginxErrorHandler;
                     }
-                    //绑定退出事件
+                    //绑定退出事件、错误事件
                     myProcess.Exited += nginxProcess_Exited;
                     myProcess.ErrorDataReceived += nginxErrorHandler;
                     this.processArr[1] = myProcess;//附加进程对象,用于停止服务时调用

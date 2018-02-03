@@ -139,6 +139,7 @@ namespace php_env.service
                 {
                     myProcess.StartInfo.UseShellExecute = false;
                     myProcess.StartInfo.RedirectStandardOutput = true;
+                    myProcess.StartInfo.RedirectStandardError = true;
                     myProcess.StartInfo.WorkingDirectory = appPath;
                     myProcess.StartInfo.FileName = appPath + @"\php.exe";
                     myProcess.StartInfo.Arguments = "composer.phar " + command;
@@ -146,13 +147,20 @@ namespace php_env.service
                     myProcess.Start();
                     StreamReader reader = myProcess.StandardOutput;
                     result = reader.ReadToEnd();
+                    string error = "";
+                    StreamReader reader1 = myProcess.StandardError;
+                    error = reader1.ReadToEnd();
                     myProcess.WaitForExit();
+                    if (myProcess.ExitCode != 0)
+                    {
+                        throw new Exception(error);
+                    }
                 }
                 return result;
             });
         }
 
-        private Task setComposerMirrorAsync(string appPath, string composerMirrorUrl)
+        private Task<string> setComposerMirrorAsync(string appPath, string composerMirrorUrl)
         {
             return this.runComposerCommand(appPath, @"config -g repo.packagist composer " + composerMirrorUrl);
         }

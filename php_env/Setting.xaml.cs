@@ -217,7 +217,7 @@ namespace php_env
                     this.composerProgressBar.Visibility = Visibility.Hidden;
                     //composer -V
                     string composerInfo = await installService.getComposerInfoAsync(appPath);
-                    mainWin.showErrorMessage("--composer版本信息如下--\r\n" + composerInfo, "composer安装成功", MessageBoxImage.Information);
+                    mainWin.showErrorMessage("--composer版本信息如下--\r\n" + composerInfo, boxTitle + "成功", MessageBoxImage.Information);
                 }
                 catch (Exception e1)
                 {
@@ -227,7 +227,7 @@ namespace php_env
                     this.composerProgressBar.IsIndeterminate = true;
                     this.composerProgressBar.Visibility = Visibility.Hidden;
                     //
-                    mainWin.showErrorMessage(e1.Message, boxTitle);
+                    mainWin.showErrorMessage(e1.Message, boxTitle + "失败");
                 }
             }
         }
