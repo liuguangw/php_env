@@ -1,5 +1,4 @@
 ﻿using php_env.items;
-using System.IO;
 
 namespace php_env.service
 {
@@ -17,10 +16,8 @@ namespace php_env.service
                 {
                     string path = System.AppDomain.CurrentDomain.BaseDirectory;
 #if (DEBUG)
-                    DirectoryInfo di = new DirectoryInfo(path);
+                    System.IO.DirectoryInfo di = new System.IO.DirectoryInfo(path);
                     path = di.Parent.Parent.FullName + @"\";
-#else
-
 #endif
                     _dataPath = path + "data";
                 }
