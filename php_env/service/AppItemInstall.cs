@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using php_env.items;
 
@@ -97,14 +98,13 @@ namespace php_env.service
                 xmlResource = mainWin.xmlResource;
             });
             //基本配置替换
-            fileContent = fileContent.Replace(";cgi.fix_pathinfo=1", "cgi.fix_pathinfo=0")
-            .Replace("; extension_dir = \"ext\"", "extension_dir = \"ext\"")
-            .Replace("upload_max_filesize = 2M", "upload_max_filesize = " + xmlResource.phpUploadMaxFilesize);
+            fileContent = Regex.Replace(fileContent, ";\\s*cgi.fix_pathinfo\\s*=\\s*1", "cgi.fix_pathinfo=0");
+            fileContent = Regex.Replace(fileContent, ";\\s*extension_dir\\s*=\\s*\"ext\"", "extension_dir=\"ext\"");
+            fileContent = Regex.Replace(fileContent, "upload_max_filesize\\s*=\\s*\\d+M", "upload_max_filesize=" + xmlResource.phpUploadMaxFilesize);
             //扩展
             foreach (string extName in xmlResource.phpExtensions)
             {
-                fileContent = fileContent.Replace(";extension=php_" + extName, "extension=php_" + extName);//老版本
-                fileContent = fileContent.Replace(";extension=" + extName, "extension=" + extName);//新版本
+                fileContent = Regex.Replace(fileContent, ";\\s*extension\\s*=\\s*(php_)?" + extName + "(\\.dll)?", "extension=$1" + extName + "$2");
             }
             File.WriteAllText(configPath, fileContent, encoding);
         }
