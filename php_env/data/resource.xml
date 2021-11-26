@@ -17,12 +17,16 @@
 	<!--php版本列表-->
 	<php upload_max_filesize="20M">
 		<item version="8.1.0" vc="16">https://windows.php.net/downloads/releases/php-8.1.0-nts-Win32-vs16-x64.zip</item>
-		<item version="7.3.9" vc="15">https://windows.php.net/downloads/releases/php-7.3.9-nts-Win32-VC15-x64.zip</item>
+		<item version="7.4.26" vc="15">https://windows.php.net/downloads/releases/php-7.4.26-nts-Win32-vc15-x64.zip</item>
+		<item version="7.3.33" vc="15">https://windows.php.net/downloads/releases/php-7.3.33-nts-Win32-VC15-x64.zip</item>
 		<item version="7.2.1" vc="15">https://windows.php.net/downloads/releases/archives/php-7.2.1-nts-Win32-VC15-x64.zip</item>
 		<item version="7.1.13" vc="14">https://windows.php.net/downloads/releases/archives/php-7.1.13-nts-Win32-VC14-x64.zip</item>
-		<item version="7.0.27" vc="14">https://windows.php.net/downloads/releases/php-7.0.27-Win32-VC14-x64.zip</item>
-		<item version="5.6.33" vc="11">https://windows.php.net/downloads/releases/php-5.6.33-nts-Win32-VC11-x64.zip</item>
+		<item version="7.0.27" vc="14">https://windows.php.net/downloads/releases/archives/php-7.0.27-nts-Win32-VC14-x64.zip</item>
+		<item version="5.6.33" vc="11">https://windows.php.net/downloads/releases/archives/php-5.6.33-nts-Win32-VC11-x64.zip</item>
 		<item version="5.5.38" vc="11">https://windows.php.net/downloads/releases/archives/php-5.5.38-Win32-VC11-x64.zip</item>
+		<item version="5.4.45" vc="9">https://windows.php.net/downloads/releases/archives/php-5.4.45-nts-Win32-VC9-x86.zip</item>
+		<item version="5.3.29" vc="9">https://windows.php.net/downloads/releases/archives/php-5.3.29-nts-Win32-VC9-x86.zip</item>
+		<item version="5.2.17" vc="6">https://windows.php.net/downloads/releases/archives/php-5.2.17-nts-Win32-VC6-x86.zip</item>
 	</php>
 	<!--nginx版本列表-->
 	<nginx>
